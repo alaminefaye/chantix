@@ -67,9 +67,9 @@
         <div class="row mb-4">
           <div class="col-md-4">
             <h6 class="fw-semibold mb-2">Budget</h6>
-            <p class="fs-4 fw-semibold mb-0">{{ number_format($project->budget, 2, ',', ' ') }} €</p>
+            <p class="fs-4 fw-semibold mb-0">{{ number_format($project->budget, 2, ',', ' ') }} FCFA</p>
             @if(isset($totalExpenses))
-              <small class="text-muted">Dépensé: {{ number_format($totalExpenses, 2, ',', ' ') }} € ({{ number_format($budgetUsed, 1) }}%)</small>
+              <small class="text-muted">Dépensé: {{ number_format($totalExpenses, 2, ',', ' ') }} FCFA ({{ number_format($budgetUsed, 1) }}%)</small>
               <div class="progress mt-1" style="height: 8px;">
                 <div class="progress-bar {{ $budgetUsed > 100 ? 'bg-danger' : ($budgetUsed > 80 ? 'bg-warning' : 'bg-success') }}" style="width: {{ min($budgetUsed, 100) }}%"></div>
               </div>
@@ -78,8 +78,8 @@
           <div class="col-md-4">
             <h6 class="fw-semibold mb-2">Dépenses</h6>
             @if(isset($totalExpenses))
-              <p class="fs-4 fw-semibold mb-0 text-info">{{ number_format($totalExpenses, 2, ',', ' ') }} €</p>
-              <small class="text-muted">Payé: {{ number_format($paidExpenses, 2, ',', ' ') }} € | En attente: {{ number_format($unpaidExpenses, 2, ',', ' ') }} €</small>
+              <p class="fs-4 fw-semibold mb-0 text-info">{{ number_format($totalExpenses, 2, ',', ' ') }} FCFA</p>
+              <small class="text-muted">Payé: {{ number_format($paidExpenses, 2, ',', ' ') }} FCFA | En attente: {{ number_format($unpaidExpenses, 2, ',', ' ') }} FCFA</small>
             @else
               <p class="mb-0">Aucune dépense</p>
             @endif
@@ -692,7 +692,7 @@
           return \Carbon\Carbon::createFromFormat('Y-m', $month)->format('M Y');
         }, array_keys($expensesByMonth))) !!},
         datasets: [{
-          label: 'Dépenses (€)',
+          label: 'Dépenses (FCFA)',
           data: {!! json_encode(array_values($expensesByMonth)) !!},
           borderColor: '#5D87FF',
           backgroundColor: 'rgba(93, 135, 255, 0.1)',

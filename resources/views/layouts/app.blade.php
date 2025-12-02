@@ -103,8 +103,8 @@
               </li>
             @endif
 
-            {{-- Entreprises - Visible uniquement pour Admin --}}
-            @if($user->hasRoleInCompany('admin'))
+            {{-- Entreprises - Visible uniquement pour Super Admin --}}
+            @if($user->isSuperAdmin())
               <li class="sidebar-item">
                 <a class="sidebar-link {{ request()->routeIs('companies.*') ? 'active' : '' }}" href="{{ route('companies.index') }}" aria-expanded="false">
                   <span>
@@ -114,18 +114,24 @@
                 </a>
               </li>
             @endif
+
+            {{-- Invitations - Visible pour les Admins (pas super admin) --}}
+            @if($user->hasRoleInCompany('admin') && !$user->isSuperAdmin() && $user->current_company_id)
+              @php
+                $currentCompany = \App\Models\Company::find($user->current_company_id);
+              @endphp
+              @if($currentCompany)
+                <li class="sidebar-item">
+                  <a class="sidebar-link {{ request()->routeIs('invitations.*') ? 'active' : '' }}" href="{{ route('invitations.index', $currentCompany) }}" aria-expanded="false">
+                    <span>
+                      <i class="ti ti-user-plus"></i>
+                    </span>
+                    <span class="hide-menu">Invitations</span>
+                  </a>
+                </li>
+              @endif
+            @endif
           </ul>
-          <div class="unlimited-access hide-menu bg-light-primary position-relative mb-7 mt-5 rounded">
-            <div class="d-flex">
-              <div class="unlimited-access-title me-3">
-                <h6 class="fw-semibold fs-4 mb-6 text-dark w-85">Upgrade to pro</h6>
-                <a href="https://adminmart.com/product/modernize-bootstrap-5-admin-template/" target="_blank" class="btn btn-primary fs-2 fw-semibold lh-sm">Buy Pro</a>
-              </div>
-              <div class="unlimited-access-img">
-                <img src="{{ asset('assets/images/backgrounds/rocket.png') }}" alt="" class="img-fluid">
-              </div>
-            </div>
-          </div>
         </nav>
         <!-- End Sidebar navigation -->
       </div>
@@ -142,35 +148,6 @@
               <a class="nav-link sidebartoggler nav-icon-hover" id="headerCollapse" href="javascript:void(0)">
                 <i class="ti ti-menu-2"></i>
               </a>
-            </li>
-            <li class="nav-item dropdown">
-              <a class="nav-link nav-icon-hover position-relative" href="javascript:void(0)" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="ti ti-bell-ringing"></i>
-                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notificationBadge" style="display: none;">
-                  <span id="notificationCount">0</span>
-                </span>
-              </a>
-              <ul class="dropdown-menu dropdown-menu-end dropdown-menu-lg" aria-labelledby="notificationDropdown" style="max-width: 400px; max-height: 500px; overflow-y: auto;">
-                <li class="dropdown-header d-flex justify-content-between align-items-center">
-                  <h6 class="mb-0">Notifications</h6>
-                  <a href="{{ route('notifications.index') }}" class="btn btn-sm btn-link p-0">Voir tout</a>
-                </li>
-                <li><hr class="dropdown-divider"></li>
-                <div id="notificationsList">
-                  <li class="px-3 py-2 text-center text-muted">
-                    <small>Chargement...</small>
-                  </li>
-                </div>
-                <li><hr class="dropdown-divider"></li>
-                <li class="px-3 py-2">
-                  <a href="{{ route('notifications.read-all') }}" class="btn btn-sm btn-outline-primary w-100" onclick="event.preventDefault(); document.getElementById('markAllReadForm').submit();">
-                    <i class="ti ti-check me-1"></i> Tout marquer comme lu
-                  </a>
-                  <form id="markAllReadForm" action="{{ route('notifications.read-all') }}" method="POST" style="display: none;">
-                    @csrf
-                  </form>
-                </li>
-              </ul>
             </li>
           </ul>
           <!-- Barre de recherche globale -->
@@ -191,6 +168,35 @@
           </div>
           <div class="navbar-collapse justify-content-end px-0" id="navbarNav">
             <ul class="navbar-nav flex-row ms-auto align-items-center justify-content-end">
+              <li class="nav-item dropdown me-3">
+                <a class="nav-link nav-icon-hover position-relative" href="javascript:void(0)" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                  <i class="ti ti-bell-ringing"></i>
+                  <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notificationBadge" style="display: none;">
+                    <span id="notificationCount">0</span>
+                  </span>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end dropdown-menu-lg" aria-labelledby="notificationDropdown" style="max-width: 400px; max-height: 500px; overflow-y: auto; right: 0; left: auto;">
+                  <li class="dropdown-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">Notifications</h6>
+                    <a href="{{ route('notifications.index') }}" class="btn btn-sm btn-link p-0">Voir tout</a>
+                  </li>
+                  <li><hr class="dropdown-divider"></li>
+                  <div id="notificationsList">
+                    <li class="px-3 py-2 text-center text-muted">
+                      <small>Chargement...</small>
+                    </li>
+                  </div>
+                  <li><hr class="dropdown-divider"></li>
+                  <li class="px-3 py-2">
+                    <a href="{{ route('notifications.read-all') }}" class="btn btn-sm btn-outline-primary w-100" onclick="event.preventDefault(); document.getElementById('markAllReadForm').submit();">
+                      <i class="ti ti-check me-1"></i> Tout marquer comme lu
+                    </a>
+                    <form id="markAllReadForm" action="{{ route('notifications.read-all') }}" method="POST" style="display: none;">
+                      @csrf
+                    </form>
+                  </li>
+                </ul>
+              </li>
               @if(auth()->user()->currentCompany)
                 <li class="nav-item me-3">
                   <div class="d-flex flex-column align-items-end">

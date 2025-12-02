@@ -36,7 +36,7 @@
           <div class="col-md-3">
             <div class="card bg-light-primary">
               <div class="card-body text-center">
-                <h3 class="mb-0">{{ number_format($totalExpenses, 2, ',', ' ') }} €</h3>
+                <h3 class="mb-0">{{ number_format($totalExpenses, 2, ',', ' ') }} FCFA</h3>
                 <p class="mb-0 text-muted">Total dépenses</p>
               </div>
             </div>
@@ -44,7 +44,7 @@
           <div class="col-md-3">
             <div class="card bg-light-success">
               <div class="card-body text-center">
-                <h3 class="mb-0">{{ number_format($paidExpenses, 2, ',', ' ') }} €</h3>
+                <h3 class="mb-0">{{ number_format($paidExpenses, 2, ',', ' ') }} FCFA</h3>
                 <p class="mb-0 text-muted">Payé</p>
               </div>
             </div>
@@ -52,7 +52,7 @@
           <div class="col-md-3">
             <div class="card bg-light-danger">
               <div class="card-body text-center">
-                <h3 class="mb-0">{{ number_format($unpaidExpenses, 2, ',', ' ') }} €</h3>
+                <h3 class="mb-0">{{ number_format($unpaidExpenses, 2, ',', ' ') }} FCFA</h3>
                 <p class="mb-0 text-muted">Non payé</p>
               </div>
             </div>
@@ -60,7 +60,7 @@
           <div class="col-md-3">
             <div class="card bg-light-info">
               <div class="card-body text-center">
-                <h3 class="mb-0">{{ number_format($project->budget - $totalExpenses, 2, ',', ' ') }} €</h3>
+                <h3 class="mb-0">{{ number_format($project->budget - $totalExpenses, 2, ',', ' ') }} FCFA</h3>
                 <p class="mb-0 text-muted">Budget restant</p>
               </div>
             </div>
@@ -141,7 +141,7 @@
                     </span>
                   </td>
                   <td class="border-bottom-0">
-                    <h6 class="fw-semibold mb-0 fs-4">{{ number_format($expense->amount, 2, ',', ' ') }} €</h6>
+                    <h6 class="fw-semibold mb-0 fs-4">{{ number_format($expense->amount, 2, ',', ' ') }} FCFA</h6>
                   </td>
                   <td class="border-bottom-0">
                     @if($expense->supplier)

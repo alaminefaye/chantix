@@ -17,17 +17,13 @@ class CompanyController extends Controller
     {
         $user = Auth::user();
         
-        // Seuls les administrateurs peuvent voir la gestion des entreprises
-        if (!$user->hasRoleInCompany('admin') && !$user->isSuperAdmin()) {
-            abort(403, 'Seuls les administrateurs peuvent accéder à la gestion des entreprises.');
+        // Seul le super admin peut voir la gestion des entreprises
+        if (!$user->isSuperAdmin()) {
+            abort(403, 'Accès réservé au super administrateur.');
         }
         
-        // Le super admin voit toutes les entreprises, les autres ne voient que les leurs
-        if ($user->isSuperAdmin()) {
-            $companies = \App\Models\Company::where('is_active', true)->get();
-        } else {
-            $companies = $user->companies()->wherePivot('is_active', true)->get();
-        }
+        // Le super admin voit toutes les entreprises
+        $companies = \App\Models\Company::where('is_active', true)->get();
         
         return view('companies.index', compact('companies'));
     }
@@ -37,6 +33,13 @@ class CompanyController extends Controller
      */
     public function create()
     {
+        $user = Auth::user();
+        
+        // Seul le super admin peut créer des entreprises
+        if (!$user->isSuperAdmin()) {
+            abort(403, 'Seul le super administrateur peut créer des entreprises.');
+        }
+        
         return view('companies.create');
     }
 
@@ -45,6 +48,13 @@ class CompanyController extends Controller
      */
     public function store(Request $request)
     {
+        $user = Auth::user();
+        
+        // Seul le super admin peut créer des entreprises
+        if (!$user->isSuperAdmin()) {
+            abort(403, 'Seul le super administrateur peut créer des entreprises.');
+        }
+        
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'nullable|email|max:255',
@@ -58,18 +68,6 @@ class CompanyController extends Controller
 
         $company = Company::create($request->all());
 
-        // Attacher l'utilisateur actuel comme admin
-        $user = Auth::user();
-        $adminRole = Role::where('name', 'admin')->first();
-        
-        if ($adminRole) {
-            $user->companies()->attach($company->id, [
-                'role_id' => $adminRole->id,
-                'is_active' => true,
-                'joined_at' => now(),
-            ]);
-        }
-
         return redirect()->route('companies.index')
             ->with('success', 'Entreprise créée avec succès !');
     }
@@ -81,15 +79,18 @@ class CompanyController extends Controller
     {
         $user = Auth::user();
         
-        // Vérifier que l'utilisateur appartient à cette entreprise
-        if (!$user->companies()->where('companies.id', $company->id)->exists()) {
-            return back()->withErrors(['error' => 'Vous n\'appartenez pas à cette entreprise.']);
+        // Le super admin peut accéder à toutes les entreprises
+        if (!$user->isSuperAdmin()) {
+            // Vérifier que l'utilisateur appartient à cette entreprise
+            if (!$user->companies()->where('companies.id', $company->id)->exists()) {
+                return back()->withErrors(['error' => 'Vous n\'appartenez pas à cette entreprise.']);
+            }
         }
 
         $user->current_company_id = $company->id;
         $user->save();
 
-        return redirect()->back()->with('success', 'Entreprise changée avec succès !');
+        return redirect()->route('dashboard')->with('success', 'Entreprise changée avec succès !');
     }
 
     /**
@@ -99,9 +100,9 @@ class CompanyController extends Controller
     {
         $user = Auth::user();
         
-        // Vérifier l'accès
-        if (!$user->companies()->where('companies.id', $company->id)->exists()) {
-            abort(403);
+        // Seul le super admin peut voir les détails des entreprises
+        if (!$user->isSuperAdmin()) {
+            abort(403, 'Accès réservé au super administrateur.');
         }
 
         return view('companies.show', compact('company'));
@@ -114,13 +115,9 @@ class CompanyController extends Controller
     {
         $user = Auth::user();
         
-        // Vérifier l'accès et que l'utilisateur est admin
-        if (!$user->companies()->where('companies.id', $company->id)->exists()) {
-            abort(403);
-        }
-
-        if (!$user->hasRoleInCompany('admin', $company->id)) {
-            abort(403, 'Seuls les administrateurs peuvent modifier l\'entreprise.');
+        // Seul le super admin peut modifier les entreprises
+        if (!$user->isSuperAdmin()) {
+            abort(403, 'Accès réservé au super administrateur.');
         }
 
         return view('companies.edit', compact('company'));
@@ -133,13 +130,9 @@ class CompanyController extends Controller
     {
         $user = Auth::user();
         
-        // Vérifier l'accès et que l'utilisateur est admin
-        if (!$user->companies()->where('companies.id', $company->id)->exists()) {
-            abort(403);
-        }
-
-        if (!$user->hasRoleInCompany('admin', $company->id)) {
-            abort(403, 'Seuls les administrateurs peuvent modifier l\'entreprise.');
+        // Seul le super admin peut modifier les entreprises
+        if (!$user->isSuperAdmin()) {
+            abort(403, 'Accès réservé au super administrateur.');
         }
 
         $validated = $request->validate([

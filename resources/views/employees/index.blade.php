@@ -90,7 +90,7 @@
                   </td>
                   <td class="border-bottom-0">
                     @if($employee->hourly_rate)
-                      <h6 class="fw-semibold mb-0">{{ number_format($employee->hourly_rate, 2, ',', ' ') }} €/h</h6>
+                      <h6 class="fw-semibold mb-0">{{ number_format($employee->hourly_rate, 2, ',', ' ') }} FCFA/h</h6>
                     @else
                       <span class="text-muted">-</span>
                     @endif
@@ -106,6 +106,11 @@
                     <div class="d-flex align-items-center gap-2">
                       <a href="{{ route('employees.show', $employee) }}" class="btn btn-sm btn-info">Voir</a>
                       <a href="{{ route('employees.edit', $employee) }}" class="btn btn-sm btn-warning">Modifier</a>
+                      <form action="{{ route('employees.destroy', $employee) }}" method="POST" class="d-inline" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cet employé ? Cette action est irréversible.');">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
+                      </form>
                     </div>
                   </td>
                 </tr>

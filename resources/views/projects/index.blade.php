@@ -183,7 +183,7 @@
                     </div>
                   </td>
                   <td class="border-bottom-0">
-                    <h6 class="fw-semibold mb-0 fs-4">{{ number_format($project->budget, 2, ',', ' ') }} €</h6>
+                    <h6 class="fw-semibold mb-0 fs-4">{{ number_format($project->budget, 2, ',', ' ') }} FCFA</h6>
                   </td>
                   <td class="border-bottom-0">
                     @if($project->start_date)

@@ -81,10 +81,8 @@
 
             <div class="col-md-6 mb-3">
               <label for="employee_number" class="form-label">Numéro d'employé</label>
-              <input type="text" class="form-control @error('employee_number') is-invalid @enderror" id="employee_number" name="employee_number" value="{{ old('employee_number') }}">
-              @error('employee_number')
-                <div class="invalid-feedback">{{ $message }}</div>
-              @enderror
+              <input type="text" class="form-control bg-light" id="employee_number" value="Généré automatiquement" readonly disabled>
+              <small class="text-muted">Le numéro d'employé sera généré automatiquement lors de la création</small>
             </div>
           </div>
 
@@ -98,7 +96,7 @@
             </div>
 
             <div class="col-md-6 mb-3">
-              <label for="hourly_rate" class="form-label">Taux horaire (€)</label>
+              <label for="hourly_rate" class="form-label">Taux horaire (FCFA)</label>
               <input type="number" step="0.01" min="0" class="form-control @error('hourly_rate') is-invalid @enderror" id="hourly_rate" name="hourly_rate" value="{{ old('hourly_rate') }}">
               @error('hourly_rate')
                 <div class="invalid-feedback">{{ $message }}</div>

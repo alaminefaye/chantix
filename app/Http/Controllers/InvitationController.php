@@ -231,6 +231,104 @@ class InvitationController extends Controller
     }
 
     /**
+     * Afficher les détails d'une invitation
+     */
+    public function show(Company $company, Invitation $invitation)
+    {
+        $user = Auth::user();
+        $companyId = $user->current_company_id;
+
+        if ($company->id !== $companyId || $invitation->company_id !== $company->id) {
+            abort(403, 'Accès non autorisé.');
+        }
+
+        if (!$user->hasRoleInCompany('admin', $companyId)) {
+            abort(403, 'Seuls les administrateurs peuvent voir les détails des invitations.');
+        }
+
+        $invitation->load('inviter', 'role', 'company');
+
+        return view('invitations.show', compact('company', 'invitation'));
+    }
+
+    /**
+     * Afficher le formulaire de modification d'une invitation
+     */
+    public function edit(Company $company, Invitation $invitation)
+    {
+        $user = Auth::user();
+        $companyId = $user->current_company_id;
+
+        if ($company->id !== $companyId || $invitation->company_id !== $company->id) {
+            abort(403, 'Accès non autorisé.');
+        }
+
+        if (!$user->hasRoleInCompany('admin', $companyId)) {
+            abort(403, 'Seuls les administrateurs peuvent modifier des invitations.');
+        }
+
+        // Seules les invitations en attente peuvent être modifiées
+        if ($invitation->status !== 'pending' || $invitation->isExpired()) {
+            return redirect()->route('invitations.index', $company)
+                ->with('error', 'Seules les invitations en attente peuvent être modifiées.');
+        }
+
+        $roles = Role::all();
+
+        return view('invitations.edit', compact('company', 'invitation', 'roles'));
+    }
+
+    /**
+     * Mettre à jour une invitation
+     */
+    public function update(Request $request, Company $company, Invitation $invitation)
+    {
+        $user = Auth::user();
+        $companyId = $user->current_company_id;
+
+        if ($company->id !== $companyId || $invitation->company_id !== $company->id) {
+            abort(403, 'Accès non autorisé.');
+        }
+
+        if (!$user->hasRoleInCompany('admin', $companyId)) {
+            abort(403, 'Seuls les administrateurs peuvent modifier des invitations.');
+        }
+
+        // Seules les invitations en attente peuvent être modifiées
+        if ($invitation->status !== 'pending' || $invitation->isExpired()) {
+            return redirect()->route('invitations.index', $company)
+                ->with('error', 'Seules les invitations en attente peuvent être modifiées.');
+        }
+
+        $validated = $request->validate([
+            'email' => 'required|email|max:255',
+            'role_id' => 'required|exists:roles,id',
+            'message' => 'nullable|string|max:1000',
+        ]);
+
+        // Vérifier si l'email a changé et s'il existe déjà une invitation en attente pour ce nouvel email
+        if ($validated['email'] !== $invitation->email) {
+            $existingInvitation = Invitation::where('company_id', $company->id)
+                ->where('email', $validated['email'])
+                ->where('status', 'pending')
+                ->where('expires_at', '>', now())
+                ->where('id', '!=', $invitation->id)
+                ->first();
+
+            if ($existingInvitation) {
+                return redirect()->back()
+                    ->with('error', 'Une invitation est déjà en attente pour cet email.')
+                    ->withInput();
+            }
+        }
+
+        $invitation->update($validated);
+
+        return redirect()->route('invitations.index', $company)
+            ->with('success', 'Invitation modifiée avec succès.');
+    }
+
+    /**
      * Annuler une invitation
      */
     public function destroy(Company $company, Invitation $invitation)

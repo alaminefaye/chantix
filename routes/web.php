@@ -50,6 +50,9 @@ Route::middleware(['auth', 'verified', 'company'])->group(function () {
         Route::get('/invitations', [\App\Http\Controllers\InvitationController::class, 'index'])->name('index');
         Route::get('/invitations/create', [\App\Http\Controllers\InvitationController::class, 'create'])->name('create');
         Route::post('/invitations', [\App\Http\Controllers\InvitationController::class, 'store'])->name('store');
+        Route::get('/invitations/{invitation}', [\App\Http\Controllers\InvitationController::class, 'show'])->name('show');
+        Route::get('/invitations/{invitation}/edit', [\App\Http\Controllers\InvitationController::class, 'edit'])->name('edit');
+        Route::put('/invitations/{invitation}', [\App\Http\Controllers\InvitationController::class, 'update'])->name('update');
         Route::post('/invitations/{invitation}/resend', [\App\Http\Controllers\InvitationController::class, 'resend'])->name('resend');
         Route::delete('/invitations/{invitation}', [\App\Http\Controllers\InvitationController::class, 'destroy'])->name('destroy');
     });

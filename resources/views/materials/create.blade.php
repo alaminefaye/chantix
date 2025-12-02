@@ -96,7 +96,7 @@
 
           <div class="row">
             <div class="col-md-6 mb-3">
-              <label for="unit_price" class="form-label">Prix unitaire (€)</label>
+              <label for="unit_price" class="form-label">Prix unitaire (FCFA)</label>
               <input type="number" step="0.01" min="0" class="form-control @error('unit_price') is-invalid @enderror" id="unit_price" name="unit_price" value="{{ old('unit_price', 0) }}">
               @error('unit_price')
                 <div class="invalid-feedback">{{ $message }}</div>

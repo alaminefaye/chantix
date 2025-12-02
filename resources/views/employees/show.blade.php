@@ -52,7 +52,7 @@
               <p class="mb-1"><strong>Numéro:</strong> {{ $employee->employee_number }}</p>
             @endif
             @if($employee->hourly_rate)
-              <p class="mb-0"><strong>Taux horaire:</strong> {{ number_format($employee->hourly_rate, 2, ',', ' ') }} €/h</p>
+              <p class="mb-0"><strong>Taux horaire:</strong> {{ number_format($employee->hourly_rate, 2, ',', ' ') }} FCFA/h</p>
             @endif
           </div>
         </div>

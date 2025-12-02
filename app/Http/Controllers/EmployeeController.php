@@ -73,7 +73,6 @@ class EmployeeController extends Controller
                 'email' => 'nullable|email|max:255',
                 'phone' => 'nullable|string|max:255',
                 'position' => 'nullable|string|max:255',
-                'employee_number' => 'nullable|string|max:255|unique:employees,employee_number',
                 'hire_date' => 'nullable|date',
                 'hourly_rate' => 'nullable|numeric|min:0',
                 'address' => 'nullable|string',
@@ -87,6 +86,9 @@ class EmployeeController extends Controller
             $validated['company_id'] = $companyId;
             // Gérer is_active manuellement (checkbox non coché = false)
             $validated['is_active'] = $request->has('is_active') && $request->input('is_active') == '1';
+            
+            // Générer automatiquement le numéro d'employé
+            $validated['employee_number'] = $this->generateEmployeeNumber($companyId);
 
             Employee::create($validated);
 
@@ -101,11 +103,6 @@ class EmployeeController extends Controller
                 ->with('error', 'Une erreur est survenue lors de la création de l\'employé: ' . $e->getMessage())
                 ->withInput();
         }
-
-        Employee::create($validated);
-
-        return redirect()->route('employees.index')
-            ->with('success', 'Employé créé avec succès.');
     }
 
     /**
@@ -191,6 +188,16 @@ class EmployeeController extends Controller
     {
         $user = Auth::user();
         $companyId = $user->current_company_id;
+
+        if (!$companyId) {
+            return redirect()->route('companies.index')
+                ->with('error', 'Veuillez sélectionner une entreprise.');
+        }
+
+        // Vérifier les permissions : Admin ou Chef de Chantier peuvent supprimer les employés
+        if (!$user->hasPermission('projects.manage_team') && !$user->hasRoleInCompany('admin', $companyId)) {
+            abort(403, 'Vous n\'avez pas la permission de supprimer des employés.');
+        }
 
         if ($employee->company_id !== $companyId) {
             abort(403, 'Accès non autorisé.');
@@ -379,6 +386,7 @@ class EmployeeController extends Controller
                         'email' => $row[2] ?? null,
                         'phone' => $row[3] ?? null,
                         'position' => $row[4] ?? null,
+                        'employee_number' => $this->generateEmployeeNumber($companyId),
                         'hourly_rate' => isset($row[5]) ? (float)$row[5] : null,
                         'address' => $row[6] ?? null,
                         'city' => $row[7] ?? null,
@@ -403,5 +411,26 @@ class EmployeeController extends Controller
             return redirect()->back()
                 ->with('error', 'Erreur lors de l\'import: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Générer un numéro d'employé unique automatiquement
+     */
+    private function generateEmployeeNumber($companyId)
+    {
+        // Compter le nombre d'employés dans l'entreprise
+        $employeeCount = Employee::where('company_id', $companyId)->count();
+        
+        // Format: EMP + numéro séquentiel (ex: EMP001, EMP002, ...)
+        $nextNumber = $employeeCount + 1;
+        $employeeNumber = 'EMP' . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+        
+        // Vérifier que le numéro n'existe pas déjà (au cas où)
+        while (Employee::where('employee_number', $employeeNumber)->exists()) {
+            $nextNumber++;
+            $employeeNumber = 'EMP' . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+        }
+        
+        return $employeeNumber;
     }
 }

@@ -96,7 +96,7 @@
             <p>Heures travaillées</p>
         </div>
         <div class="stat-box">
-            <h3>{{ number_format($data['totalExpenses'], 2) }} €</h3>
+            <h3>{{ number_format($data['totalExpenses'], 2) }} FCFA</h3>
             <p>Dépenses du jour</p>
         </div>
         <div class="stat-box">
@@ -180,7 +180,7 @@
                         <tr>
                             <td>{{ $expense->title }}</td>
                             <td>{{ $expense->type_label }}</td>
-                            <td>{{ number_format($expense->amount, 2) }} €</td>
+                            <td>{{ number_format($expense->amount, 2) }} FCFA</td>
                             <td>{{ $expense->supplier ?? '-' }}</td>
                         </tr>
                     @endforeach
@@ -188,7 +188,7 @@
                 <tfoot>
                     <tr>
                         <th colspan="2">Total</th>
-                        <th>{{ number_format($data['totalExpenses'], 2) }} €</th>
+                        <th>{{ number_format($data['totalExpenses'], 2) }} FCFA</th>
                         <th></th>
                     </tr>
                 </tfoot>

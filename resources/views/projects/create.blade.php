@@ -54,7 +54,7 @@
             </div>
           </div>
           <div class="mb-3">
-            <label for="budget" class="form-label">Budget (€)</label>
+            <label for="budget" class="form-label">Budget (FCFA)</label>
             <input type="number" step="0.01" class="form-control" id="budget" name="budget" value="{{ old('budget') }}" min="0">
           </div>
           <div class="row">

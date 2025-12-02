@@ -98,7 +98,7 @@
                     @endif
                   </td>
                   <td class="border-bottom-0">
-                    <h6 class="fw-semibold mb-0">{{ number_format($material->unit_price, 2, ',', ' ') }} €</h6>
+                    <h6 class="fw-semibold mb-0">{{ number_format($material->unit_price, 2, ',', ' ') }} FCFA</h6>
                   </td>
                   <td class="border-bottom-0">
                     @if($material->supplier)

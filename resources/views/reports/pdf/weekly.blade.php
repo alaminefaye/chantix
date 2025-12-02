@@ -109,7 +109,7 @@
             <p>Heures supplémentaires</p>
         </div>
         <div class="stat-box">
-            <h3>{{ number_format($data['totalExpenses'], 2) }} €</h3>
+            <h3>{{ number_format($data['totalExpenses'], 2) }} FCFA</h3>
             <p>Dépenses totales</p>
         </div>
         <div class="stat-box">
@@ -170,14 +170,14 @@
                     @foreach($data['expensesByType'] as $type => $amount)
                         <tr>
                             <td>{{ ucfirst($type) }}</td>
-                            <td>{{ number_format($amount, 2) }} €</td>
+                            <td>{{ number_format($amount, 2) }} FCFA</td>
                         </tr>
                     @endforeach
                 </tbody>
                 <tfoot>
                     <tr>
                         <th>Total</th>
-                        <th>{{ number_format($data['totalExpenses'], 2) }} €</th>
+                        <th>{{ number_format($data['totalExpenses'], 2) }} FCFA</th>
                     </tr>
                 </tfoot>
             </table>

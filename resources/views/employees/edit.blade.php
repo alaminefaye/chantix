@@ -99,7 +99,7 @@
             </div>
 
             <div class="col-md-6 mb-3">
-              <label for="hourly_rate" class="form-label">Taux horaire (€)</label>
+              <label for="hourly_rate" class="form-label">Taux horaire (FCFA)</label>
               <input type="number" step="0.01" min="0" class="form-control @error('hourly_rate') is-invalid @enderror" id="hourly_rate" name="hourly_rate" value="{{ old('hourly_rate', $employee->hourly_rate) }}">
               @error('hourly_rate')
                 <div class="invalid-feedback">{{ $message }}</div>

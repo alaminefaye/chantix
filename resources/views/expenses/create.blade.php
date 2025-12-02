@@ -48,7 +48,7 @@
 
           <div class="row">
             <div class="col-md-6 mb-3">
-              <label for="amount" class="form-label">Montant (€) <span class="text-danger">*</span></label>
+              <label for="amount" class="form-label">Montant (FCFA) <span class="text-danger">*</span></label>
               <input type="number" step="0.01" min="0" class="form-control @error('amount') is-invalid @enderror" id="amount" name="amount" value="{{ old('amount') }}" required>
               @error('amount')
                 <div class="invalid-feedback">{{ $message }}</div>

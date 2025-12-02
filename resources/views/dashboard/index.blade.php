@@ -182,7 +182,7 @@
           </div>
           <div class="ms-3">
             <h6 class="fw-semibold mb-0">Budget Total</h6>
-            <h4 class="fw-semibold mb-0">{{ number_format($totalBudget, 0, ',', ' ') }} €</h4>
+            <h4 class="fw-semibold mb-0">{{ number_format($totalBudget, 0, ',', ' ') }} FCFA</h4>
           </div>
         </div>
       </div>
@@ -338,7 +338,7 @@
                     </div>
                   </td>
                   <td class="border-bottom-0">
-                    <h6 class="fw-semibold mb-0 fs-4">{{ number_format($project->budget, 0, ',', ' ') }} €</h6>
+                    <h6 class="fw-semibold mb-0 fs-4">{{ number_format($project->budget, 0, ',', ' ') }} FCFA</h6>
                   </td>
                   <td class="border-bottom-0">
                     <a href="{{ route('projects.show', $project) }}" class="btn btn-sm btn-info">Voir</a>

@@ -61,7 +61,7 @@
           </div>
           <div class="col-md-6">
             <h6 class="fw-semibold mb-2">Prix unitaire</h6>
-            <p class="mb-0 fs-4">{{ number_format($material->unit_price, 2, ',', ' ') }} €</p>
+            <p class="mb-0 fs-4">{{ number_format($material->unit_price, 2, ',', ' ') }} FCFA</p>
           </div>
         </div>
 

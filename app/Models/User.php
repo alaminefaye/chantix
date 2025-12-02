@@ -235,4 +235,20 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->unreadNotifications()->count();
     }
+
+    /**
+     * Vérifier si l'utilisateur est super admin
+     */
+    public function isSuperAdmin()
+    {
+        return $this->is_super_admin === true;
+    }
+
+    /**
+     * Vérifier si l'utilisateur est vérifié
+     */
+    public function isVerified()
+    {
+        return $this->is_verified === true || $this->isSuperAdmin();
+    }
 }

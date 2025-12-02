@@ -33,6 +33,16 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
+        // Vérifier d'abord si l'utilisateur existe
+        $user = User::where('email', $request->email)->first();
+
+        // Si l'utilisateur existe mais n'est pas vérifié
+        if ($user && !$user->isVerified() && !$user->isSuperAdmin()) {
+            return back()->withErrors([
+                'email' => 'Votre compte n\'a pas encore été validé par l\'administrateur. Veuillez patienter jusqu\'à ce que votre compte soit activé.',
+            ])->onlyInput('email');
+        }
+
         $credentials = $request->only('email', 'password');
         $remember = $request->boolean('remember');
 
@@ -49,6 +59,7 @@ class AuthController extends Controller
             return redirect()->intended(route('dashboard'));
         }
 
+        // Identifiants incorrects
         return back()->withErrors([
             'email' => 'Les identifiants fournis ne correspondent pas à nos enregistrements.',
         ])->onlyInput('email');

@@ -35,7 +35,7 @@
           </div>
           <div class="col-md-6">
             <h6 class="fw-semibold mb-2">Montant</h6>
-            <p class="fs-4 fw-semibold mb-0">{{ number_format($expense->amount, 2, ',', ' ') }} €</p>
+            <p class="fs-4 fw-semibold mb-0">{{ number_format($expense->amount, 2, ',', ' ') }} FCFA</p>
           </div>
         </div>
 

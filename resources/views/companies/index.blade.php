@@ -21,6 +21,17 @@
           </div>
         @endif
 
+        @if($errors->any())
+          <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <ul class="mb-0">
+              @foreach($errors->all() as $error)
+                <li>{{ $error }}</li>
+              @endforeach
+            </ul>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        @endif
+
         <div class="table-responsive">
           <table class="table text-nowrap mb-0 align-middle">
             <thead class="text-dark fs-4">
@@ -67,12 +78,16 @@
                   <td class="border-bottom-0">
                     <div class="d-flex align-items-center gap-2">
                       @if(auth()->user()->current_company_id != $company->id)
-                        <form action="{{ route('companies.switch', $company) }}" method="POST">
+                        <form action="{{ route('companies.switch', $company) }}" method="POST" class="d-inline">
                           @csrf
-                          <button type="submit" class="btn btn-sm btn-outline-primary">Sélectionner</button>
+                          <button type="submit" class="btn btn-sm btn-outline-primary">
+                            <i class="ti ti-check me-1"></i>Sélectionner
+                          </button>
                         </form>
                       @endif
-                      <a href="{{ route('companies.show', $company) }}" class="btn btn-sm btn-info">Voir</a>
+                      <a href="{{ route('companies.show', $company) }}" class="btn btn-sm btn-info">
+                        <i class="ti ti-eye me-1"></i>Voir
+                      </a>
                     </div>
                   </td>
                 </tr>
