@@ -329,7 +329,7 @@ class InvitationController extends Controller
     }
 
     /**
-     * Annuler une invitation
+     * Supprimer une invitation
      */
     public function destroy(Company $company, Invitation $invitation)
     {
@@ -341,13 +341,14 @@ class InvitationController extends Controller
         }
 
         if (!$user->hasRoleInCompany('admin', $companyId)) {
-            abort(403, 'Seuls les administrateurs peuvent annuler des invitations.');
+            abort(403, 'Seuls les administrateurs peuvent supprimer des invitations.');
         }
 
-        $invitation->markAsCancelled();
+        // Supprimer réellement l'invitation de la base de données
+        $invitation->delete();
 
         return redirect()->route('invitations.index', $company)
-            ->with('success', 'Invitation annulée avec succès.');
+            ->with('success', 'Invitation supprimée avec succès.');
     }
 
     /**
