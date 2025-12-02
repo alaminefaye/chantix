@@ -1,0 +1,173 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Company;
+use App\Models\Role;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+
+class CompanyController extends Controller
+{
+    /**
+     * Afficher la liste des entreprises de l'utilisateur
+     */
+    public function index()
+    {
+        $user = Auth::user();
+        
+        // Seuls les administrateurs peuvent voir la gestion des entreprises
+        if (!$user->hasRoleInCompany('admin') && !$user->isSuperAdmin()) {
+            abort(403, 'Seuls les administrateurs peuvent accéder à la gestion des entreprises.');
+        }
+        
+        // Le super admin voit toutes les entreprises, les autres ne voient que les leurs
+        if ($user->isSuperAdmin()) {
+            $companies = \App\Models\Company::where('is_active', true)->get();
+        } else {
+            $companies = $user->companies()->wherePivot('is_active', true)->get();
+        }
+        
+        return view('companies.index', compact('companies'));
+    }
+
+    /**
+     * Afficher le formulaire de création d'entreprise
+     */
+    public function create()
+    {
+        return view('companies.create');
+    }
+
+    /**
+     * Créer une nouvelle entreprise
+     */
+    public function store(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'nullable|email|max:255',
+            'phone' => 'nullable|string|max:20',
+            'address' => 'nullable|string',
+            'city' => 'nullable|string|max:255',
+            'country' => 'nullable|string|max:255',
+            'siret' => 'nullable|string|max:255',
+            'description' => 'nullable|string',
+        ]);
+
+        $company = Company::create($request->all());
+
+        // Attacher l'utilisateur actuel comme admin
+        $user = Auth::user();
+        $adminRole = Role::where('name', 'admin')->first();
+        
+        if ($adminRole) {
+            $user->companies()->attach($company->id, [
+                'role_id' => $adminRole->id,
+                'is_active' => true,
+                'joined_at' => now(),
+            ]);
+        }
+
+        return redirect()->route('companies.index')
+            ->with('success', 'Entreprise créée avec succès !');
+    }
+
+    /**
+     * Changer l'entreprise actuelle
+     */
+    public function switch(Request $request, Company $company)
+    {
+        $user = Auth::user();
+        
+        // Vérifier que l'utilisateur appartient à cette entreprise
+        if (!$user->companies()->where('companies.id', $company->id)->exists()) {
+            return back()->withErrors(['error' => 'Vous n\'appartenez pas à cette entreprise.']);
+        }
+
+        $user->current_company_id = $company->id;
+        $user->save();
+
+        return redirect()->back()->with('success', 'Entreprise changée avec succès !');
+    }
+
+    /**
+     * Afficher les détails d'une entreprise
+     */
+    public function show(Company $company)
+    {
+        $user = Auth::user();
+        
+        // Vérifier l'accès
+        if (!$user->companies()->where('companies.id', $company->id)->exists()) {
+            abort(403);
+        }
+
+        return view('companies.show', compact('company'));
+    }
+
+    /**
+     * Afficher le formulaire d'édition
+     */
+    public function edit(Company $company)
+    {
+        $user = Auth::user();
+        
+        // Vérifier l'accès et que l'utilisateur est admin
+        if (!$user->companies()->where('companies.id', $company->id)->exists()) {
+            abort(403);
+        }
+
+        if (!$user->hasRoleInCompany('admin', $company->id)) {
+            abort(403, 'Seuls les administrateurs peuvent modifier l\'entreprise.');
+        }
+
+        return view('companies.edit', compact('company'));
+    }
+
+    /**
+     * Mettre à jour une entreprise
+     */
+    public function update(Request $request, Company $company)
+    {
+        $user = Auth::user();
+        
+        // Vérifier l'accès et que l'utilisateur est admin
+        if (!$user->companies()->where('companies.id', $company->id)->exists()) {
+            abort(403);
+        }
+
+        if (!$user->hasRoleInCompany('admin', $company->id)) {
+            abort(403, 'Seuls les administrateurs peuvent modifier l\'entreprise.');
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'nullable|email|max:255',
+            'phone' => 'nullable|string|max:20',
+            'address' => 'nullable|string',
+            'city' => 'nullable|string|max:255',
+            'country' => 'nullable|string|max:255',
+            'siret' => 'nullable|string|max:255',
+            'description' => 'nullable|string',
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+        ]);
+
+        // Upload du logo
+        if ($request->hasFile('logo')) {
+            // Supprimer l'ancien logo s'il existe
+            if ($company->logo && Storage::disk('public')->exists($company->logo)) {
+                Storage::disk('public')->delete($company->logo);
+            }
+
+            $path = $request->file('logo')->store('companies/logos', 'public');
+            $validated['logo'] = $path;
+        }
+
+        $company->update($validated);
+
+        return redirect()->route('companies.show', $company)
+            ->with('success', 'Entreprise mise à jour avec succès !');
+    }
+}

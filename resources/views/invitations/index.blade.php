@@ -1,0 +1,142 @@
+@extends('layouts.app')
+
+@section('title', 'Invitations - ' . $company->name)
+
+@section('content')
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h5 class="card-title fw-semibold mb-0">Invitations - {{ $company->name }}</h5>
+          <div class="d-flex gap-2">
+            <a href="{{ route('invitations.create', $company) }}" class="btn btn-primary">
+              <i class="ti ti-user-plus me-2"></i>Inviter un collaborateur
+            </a>
+            <a href="{{ route('companies.show', $company) }}" class="btn btn-secondary">Retour</a>
+          </div>
+        </div>
+
+        @if(session('success'))
+          <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        @endif
+
+        @if(session('error'))
+          <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            {{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        @endif
+
+        <div class="table-responsive">
+          <table class="table text-nowrap mb-0 align-middle">
+            <thead class="text-dark fs-4">
+              <tr>
+                <th class="border-bottom-0">
+                  <h6 class="fw-semibold mb-0">Email</h6>
+                </th>
+                <th class="border-bottom-0">
+                  <h6 class="fw-semibold mb-0">Rôle</h6>
+                </th>
+                <th class="border-bottom-0">
+                  <h6 class="fw-semibold mb-0">Invité par</h6>
+                </th>
+                <th class="border-bottom-0">
+                  <h6 class="fw-semibold mb-0">Date</h6>
+                </th>
+                <th class="border-bottom-0">
+                  <h6 class="fw-semibold mb-0">Expiration</h6>
+                </th>
+                <th class="border-bottom-0">
+                  <h6 class="fw-semibold mb-0">Statut</h6>
+                </th>
+                <th class="border-bottom-0">
+                  <h6 class="fw-semibold mb-0">Actions</h6>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              @forelse($invitations as $invitation)
+                <tr>
+                  <td class="border-bottom-0">
+                    <p class="mb-0 fw-normal">{{ $invitation->email }}</p>
+                  </td>
+                  <td class="border-bottom-0">
+                    <span class="badge bg-info rounded-3 fw-semibold">{{ $invitation->role->name ?? 'N/A' }}</span>
+                  </td>
+                  <td class="border-bottom-0">
+                    <p class="mb-0 fw-normal">{{ $invitation->inviter->name ?? 'N/A' }}</p>
+                  </td>
+                  <td class="border-bottom-0">
+                    <p class="mb-0 fw-normal">{{ $invitation->created_at->format('d/m/Y H:i') }}</p>
+                  </td>
+                  <td class="border-bottom-0">
+                    <p class="mb-0 fw-normal {{ $invitation->isExpired() ? 'text-danger' : '' }}">
+                      {{ $invitation->expires_at->format('d/m/Y') }}
+                    </p>
+                  </td>
+                  <td class="border-bottom-0">
+                    @php
+                      $statusColors = [
+                        'pending' => 'warning',
+                        'accepted' => 'success',
+                        'cancelled' => 'secondary',
+                        'expired' => 'danger',
+                      ];
+                      $statusLabels = [
+                        'pending' => 'En attente',
+                        'accepted' => 'Acceptée',
+                        'cancelled' => 'Annulée',
+                        'expired' => 'Expirée',
+                      ];
+                      $status = $invitation->isExpired() ? 'expired' : $invitation->status;
+                    @endphp
+                    <span class="badge bg-{{ $statusColors[$status] ?? 'secondary' }} rounded-3 fw-semibold">
+                      {{ $statusLabels[$status] ?? $invitation->status }}
+                    </span>
+                  </td>
+                  <td class="border-bottom-0">
+                    <div class="d-flex align-items-center gap-2">
+                      @if($invitation->status === 'pending' && !$invitation->isExpired())
+                        <form action="{{ route('invitations.resend', ['company' => $company, 'invitation' => $invitation]) }}" method="POST" class="d-inline">
+                          @csrf
+                          <button type="submit" class="btn btn-sm btn-info" title="Renvoyer">
+                            <i class="ti ti-refresh"></i>
+                          </button>
+                        </form>
+                        <form action="{{ route('invitations.destroy', ['company' => $company, 'invitation' => $invitation]) }}" method="POST" onsubmit="return confirm('Annuler cette invitation ?');" class="d-inline">
+                          @csrf
+                          @method('DELETE')
+                          <button type="submit" class="btn btn-sm btn-danger" title="Annuler">
+                            <i class="ti ti-x"></i>
+                          </button>
+                        </form>
+                      @endif
+                    </div>
+                  </td>
+                </tr>
+              @empty
+                <tr>
+                  <td colspan="7" class="text-center py-4">
+                    <p class="mb-0">Aucune invitation. <a href="{{ route('invitations.create', $company) }}">Inviter un collaborateur</a></p>
+                  </td>
+                </tr>
+              @endforelse
+            </tbody>
+          </table>
+        </div>
+
+        @if($invitations->hasPages())
+          <div class="mt-4">
+            {{ $invitations->links() }}
+          </div>
+        @endif
+      </div>
+    </div>
+  </div>
+</div>
+@endsection
+
