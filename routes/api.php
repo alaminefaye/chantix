@@ -51,5 +51,8 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
         Route::post('/progress', [\App\Http\Controllers\Api\ProgressController::class, 'store']);
         Route::delete('/progress/{progress}', [\App\Http\Controllers\Api\ProgressController::class, 'destroy']);
     });
+    
+    // Matériaux
+    Route::apiResource('materials', \App\Http\Controllers\Api\MaterialController::class);
 });
 

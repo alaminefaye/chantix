@@ -1,0 +1,220 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\Material;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
+
+class MaterialController extends Controller
+{
+    /**
+     * Liste des matériaux
+     */
+    public function index(Request $request)
+    {
+        $user = Auth::user();
+        $companyId = $user->current_company_id;
+
+        if (!$companyId && !$user->isSuperAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Veuillez sélectionner une entreprise.',
+            ], 400);
+        }
+
+        $query = $companyId 
+            ? Material::forCompany($companyId)
+            : Material::query();
+
+        // Filtre par statut actif
+        if ($request->filled('active')) {
+            $query->active();
+        }
+
+        // Recherche
+        if ($request->filled('search')) {
+            $query->where(function($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->search . '%')
+                  ->orWhere('description', 'like', '%' . $request->search . '%')
+                  ->orWhere('category', 'like', '%' . $request->search . '%')
+                  ->orWhere('reference', 'like', '%' . $request->search . '%');
+            });
+        }
+
+        // Tri
+        $sortBy = $request->get('sort_by', 'name');
+        $sortOrder = $request->get('sort_order', 'asc');
+        $query->orderBy($sortBy, $sortOrder);
+
+        $materials = $query->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $materials,
+        ], 200);
+    }
+
+    /**
+     * Détails d'un matériau
+     */
+    public function show($id)
+    {
+        $user = Auth::user();
+        $companyId = $user->current_company_id;
+
+        if (!$companyId && !$user->isSuperAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Veuillez sélectionner une entreprise.',
+            ], 400);
+        }
+
+        $material = $companyId
+            ? Material::forCompany($companyId)->find($id)
+            : Material::find($id);
+
+        if (!$material) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Matériau non trouvé.',
+            ], 404);
+        }
+
+        return response()->json($material, 200);
+    }
+
+    /**
+     * Créer un matériau
+     */
+    public function store(Request $request)
+    {
+        $user = Auth::user();
+        $companyId = $user->current_company_id;
+
+        if (!$companyId && !$user->isSuperAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Veuillez sélectionner une entreprise.',
+            ], 400);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'category' => 'nullable|string|max:255',
+            'unit' => 'nullable|string|max:50',
+            'unit_price' => 'nullable|numeric|min:0',
+            'supplier' => 'nullable|string|max:255',
+            'reference' => 'nullable|string|max:255',
+            'stock_quantity' => 'nullable|numeric|min:0',
+            'min_stock' => 'nullable|numeric|min:0',
+            'is_active' => 'nullable|boolean',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur de validation',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $data = $validator->validated();
+        $data['company_id'] = $companyId;
+        $data['is_active'] = $request->input('is_active', true);
+
+        $material = Material::create($data);
+
+        return response()->json($material, 201);
+    }
+
+    /**
+     * Mettre à jour un matériau
+     */
+    public function update(Request $request, $id)
+    {
+        $user = Auth::user();
+        $companyId = $user->current_company_id;
+
+        if (!$companyId && !$user->isSuperAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Veuillez sélectionner une entreprise.',
+            ], 400);
+        }
+
+        $material = $companyId
+            ? Material::forCompany($companyId)->find($id)
+            : Material::find($id);
+
+        if (!$material) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Matériau non trouvé.',
+            ], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'name' => 'sometimes|required|string|max:255',
+            'description' => 'nullable|string',
+            'category' => 'nullable|string|max:255',
+            'unit' => 'nullable|string|max:50',
+            'unit_price' => 'nullable|numeric|min:0',
+            'supplier' => 'nullable|string|max:255',
+            'reference' => 'nullable|string|max:255',
+            'stock_quantity' => 'nullable|numeric|min:0',
+            'min_stock' => 'nullable|numeric|min:0',
+            'is_active' => 'nullable|boolean',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur de validation',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $material->update($validator->validated());
+
+        return response()->json($material, 200);
+    }
+
+    /**
+     * Supprimer un matériau
+     */
+    public function destroy($id)
+    {
+        $user = Auth::user();
+        $companyId = $user->current_company_id;
+
+        if (!$companyId && !$user->isSuperAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Veuillez sélectionner une entreprise.',
+            ], 400);
+        }
+
+        $material = $companyId
+            ? Material::forCompany($companyId)->find($id)
+            : Material::find($id);
+
+        if (!$material) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Matériau non trouvé.',
+            ], 404);
+        }
+
+        $material->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Matériau supprimé avec succès.',
+        ], 200);
+    }
+}
+
