@@ -109,4 +109,44 @@ class DashboardController extends Controller
             'searchResults'
         ));
     }
+
+    /**
+     * API endpoint pour le dashboard
+     */
+    public function apiIndex(Request $request)
+    {
+        $user = Auth::user();
+        $companyId = $user->current_company_id;
+
+        if (!$companyId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Veuillez sélectionner une entreprise pour accéder au dashboard.',
+            ], 400);
+        }
+
+        // Statistiques des projets
+        $totalProjects = Project::forCompany($companyId)->count();
+        $activeProjects = Project::forCompany($companyId)->where('status', 'en_cours')->count();
+        $completedProjects = Project::forCompany($companyId)->where('status', 'termine')->count();
+        $blockedProjects = Project::forCompany($companyId)->where('status', 'bloque')->count();
+        
+        // Budget total
+        $totalBudget = Project::forCompany($companyId)->sum('budget');
+        
+        // Avancement moyen
+        $averageProgress = Project::forCompany($companyId)
+            ->where('status', 'en_cours')
+            ->avg('progress') ?? 0;
+
+        return response()->json([
+            'success' => true,
+            'total_projects' => $totalProjects,
+            'active_projects' => $activeProjects,
+            'completed_projects' => $completedProjects,
+            'blocked_projects' => $blockedProjects,
+            'total_budget' => $totalBudget,
+            'average_progress' => round($averageProgress, 2),
+        ], 200);
+    }
 }
