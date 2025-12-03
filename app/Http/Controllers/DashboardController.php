@@ -118,6 +118,29 @@ class DashboardController extends Controller
         $user = Auth::user();
         $companyId = $user->current_company_id;
 
+        // Si super admin et pas d'entreprise, on retourne des statistiques globales
+        if ($user->isSuperAdmin() && !$companyId) {
+            $totalProjects = Project::count();
+            $activeProjects = Project::where('status', 'en_cours')->count();
+            $completedProjects = Project::where('status', 'termine')->count();
+            $blockedProjects = Project::where('status', 'bloque')->count();
+            $totalBudget = Project::sum('budget');
+            $averageProgress = Project::where('status', 'en_cours')->avg('progress') ?? 0;
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'total_projects' => $totalProjects,
+                    'active_projects' => $activeProjects,
+                    'completed_projects' => $completedProjects,
+                    'blocked_projects' => $blockedProjects,
+                    'total_budget' => $totalBudget,
+                    'average_progress' => round($averageProgress, 2),
+                ],
+            ], 200);
+        }
+
+        // Pour les autres utilisateurs, une entreprise est requise
         if (!$companyId) {
             return response()->json([
                 'success' => false,
@@ -141,12 +164,14 @@ class DashboardController extends Controller
 
         return response()->json([
             'success' => true,
-            'total_projects' => $totalProjects,
-            'active_projects' => $activeProjects,
-            'completed_projects' => $completedProjects,
-            'blocked_projects' => $blockedProjects,
-            'total_budget' => $totalBudget,
-            'average_progress' => round($averageProgress, 2),
+            'data' => [
+                'total_projects' => $totalProjects,
+                'active_projects' => $activeProjects,
+                'completed_projects' => $completedProjects,
+                'blocked_projects' => $blockedProjects,
+                'total_budget' => $totalBudget,
+                'average_progress' => round($averageProgress, 2),
+            ],
         ], 200);
     }
 }

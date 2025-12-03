@@ -31,18 +31,7 @@ class AuthController extends Controller
             ], 422);
         }
 
-        // Vérifier si l'utilisateur existe
-        $user = User::where('email', $request->email)->first();
-
-        // Si l'utilisateur existe mais n'est pas vérifié
-        if ($user && !$user->isVerified() && !$user->isSuperAdmin()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Votre compte n\'a pas encore été validé par l\'administrateur. Veuillez patienter jusqu\'à ce que votre compte soit activé.',
-            ], 403);
-        }
-
-        // Tenter la connexion
+        // Tenter la connexion d'abord
         if (!Auth::attempt($request->only('email', 'password'))) {
             return response()->json([
                 'success' => false,
@@ -52,7 +41,16 @@ class AuthController extends Controller
 
         $user = Auth::user();
         
-        // Définir l'entreprise actuelle si l'utilisateur en a une
+        // Vérifier si l'utilisateur est vérifié (sauf super admin qui est toujours vérifié)
+        if (!$user->isVerified()) {
+            Auth::logout();
+            return response()->json([
+                'success' => false,
+                'message' => 'Votre compte n\'a pas encore été validé par l\'administrateur. Veuillez patienter jusqu\'à ce que votre compte soit activé.',
+            ], 403);
+        }
+        
+        // Définir l'entreprise actuelle si l'utilisateur en a une (sauf super admin qui peut ne pas en avoir)
         if (!$user->current_company_id && $user->companies()->exists()) {
             $user->current_company_id = $user->companies()->first()->id;
             $user->save();
