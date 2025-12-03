@@ -1,0 +1,246 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\Project;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
+
+class ProjectController extends Controller
+{
+    /**
+     * Liste des projets
+     */
+    public function index(Request $request)
+    {
+        $user = Auth::user();
+        $companyId = $user->current_company_id;
+
+        if (!$companyId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Veuillez sélectionner une entreprise.',
+            ], 400);
+        }
+
+        $query = Project::forCompany($companyId)->with('creator');
+
+        // Filtre par statut
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Filtre par responsable
+        if ($request->filled('created_by')) {
+            $query->where('created_by', $request->created_by);
+        }
+
+        // Recherche
+        if ($request->filled('search')) {
+            $query->where(function($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->search . '%')
+                  ->orWhere('description', 'like', '%' . $request->search . '%')
+                  ->orWhere('client_name', 'like', '%' . $request->search . '%');
+            });
+        }
+
+        // Tri
+        $sortBy = $request->get('sort_by', 'created_at');
+        $sortOrder = $request->get('sort_order', 'desc');
+        $query->orderBy($sortBy, $sortOrder);
+
+        $projects = $query->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $projects,
+        ], 200);
+    }
+
+    /**
+     * Détails d'un projet
+     */
+    public function show($id)
+    {
+        $user = Auth::user();
+        $companyId = $user->current_company_id;
+
+        if (!$companyId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Veuillez sélectionner une entreprise.',
+            ], 400);
+        }
+
+        $project = Project::forCompany($companyId)
+            ->with(['creator', 'company'])
+            ->find($id);
+
+        if (!$project) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Projet non trouvé.',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $project,
+        ], 200);
+    }
+
+    /**
+     * Créer un projet
+     */
+    public function store(Request $request)
+    {
+        $user = Auth::user();
+        $companyId = $user->current_company_id;
+
+        if (!$companyId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Veuillez sélectionner une entreprise.',
+            ], 400);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'address' => 'nullable|string|max:255',
+            'latitude' => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'budget' => 'required|numeric|min:0',
+            'client_name' => 'nullable|string|max:255',
+            'client_contact' => 'nullable|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Les données fournies sont invalides.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $project = Project::create([
+            'name' => $request->name,
+            'description' => $request->description,
+            'address' => $request->address,
+            'latitude' => $request->latitude,
+            'longitude' => $request->longitude,
+            'start_date' => $request->start_date,
+            'end_date' => $request->end_date,
+            'budget' => $request->budget,
+            'client_name' => $request->client_name,
+            'client_contact' => $request->client_contact,
+            'status' => 'non_demarre',
+            'progress' => 0,
+            'company_id' => $companyId,
+            'created_by' => $user->id,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Projet créé avec succès.',
+            'data' => $project->load('creator'),
+        ], 201);
+    }
+
+    /**
+     * Mettre à jour un projet
+     */
+    public function update(Request $request, $id)
+    {
+        $user = Auth::user();
+        $companyId = $user->current_company_id;
+
+        if (!$companyId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Veuillez sélectionner une entreprise.',
+            ], 400);
+        }
+
+        $project = Project::forCompany($companyId)->find($id);
+
+        if (!$project) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Projet non trouvé.',
+            ], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'name' => 'sometimes|required|string|max:255',
+            'description' => 'nullable|string',
+            'address' => 'nullable|string|max:255',
+            'latitude' => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'budget' => 'sometimes|required|numeric|min:0',
+            'status' => 'sometimes|in:non_demarre,en_cours,termine,bloque',
+            'progress' => 'sometimes|integer|min:0|max:100',
+            'client_name' => 'nullable|string|max:255',
+            'client_contact' => 'nullable|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Les données fournies sont invalides.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $project->update($request->only([
+            'name', 'description', 'address', 'latitude', 'longitude',
+            'start_date', 'end_date', 'budget', 'status', 'progress',
+            'client_name', 'client_contact',
+        ]));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Projet mis à jour avec succès.',
+            'data' => $project->load('creator'),
+        ], 200);
+    }
+
+    /**
+     * Supprimer un projet
+     */
+    public function destroy($id)
+    {
+        $user = Auth::user();
+        $companyId = $user->current_company_id;
+
+        if (!$companyId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Veuillez sélectionner une entreprise.',
+            ], 400);
+        }
+
+        $project = Project::forCompany($companyId)->find($id);
+
+        if (!$project) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Projet non trouvé.',
+            ], 404);
+        }
+
+        $project->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Projet supprimé avec succès.',
+        ], 200);
+    }
+}
+

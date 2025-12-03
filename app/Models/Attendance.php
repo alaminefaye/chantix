@@ -17,6 +17,8 @@ class Attendance extends Model
         'overtime_hours',
         'check_in_location',
         'check_out_location',
+        'check_in_photo',
+        'check_out_photo',
         'notes',
         'is_present',
         'absence_reason',
