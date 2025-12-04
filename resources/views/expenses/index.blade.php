@@ -10,9 +10,11 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
           <h5 class="card-title fw-semibold mb-0">Dépenses - {{ $project->name }}</h5>
           <div class="d-flex gap-2">
-            <a href="{{ route('expenses.create', $project) }}" class="btn btn-primary">
-              <i class="ti ti-plus me-2"></i>Nouvelle dépense
-            </a>
+            @if(auth()->user()->canManageProject($project, 'edit') || auth()->user()->hasRoleInCompany('admin') || auth()->user()->hasPermission('expenses.manage'))
+              <a href="{{ route('expenses.create', $project) }}" class="btn btn-primary">
+                <i class="ti ti-plus me-2"></i>Nouvelle dépense
+              </a>
+            @endif
             <a href="{{ route('projects.show', $project) }}" class="btn btn-secondary">Retour</a>
           </div>
         </div>
@@ -163,14 +165,20 @@
                   <td class="border-bottom-0">
                     <div class="d-flex align-items-center gap-2">
                       <a href="{{ route('expenses.show', ['project' => $project, 'expense' => $expense]) }}" class="btn btn-sm btn-info">Voir</a>
-                      <a href="{{ route('expenses.edit', ['project' => $project, 'expense' => $expense]) }}" class="btn btn-sm btn-warning">Modifier</a>
+                      @if(auth()->user()->canManageProject($project, 'edit') || auth()->user()->hasRoleInCompany('admin') || auth()->user()->hasPermission('expenses.manage'))
+                        <a href="{{ route('expenses.edit', ['project' => $project, 'expense' => $expense]) }}" class="btn btn-sm btn-warning">Modifier</a>
+                      @endif
                     </div>
                   </td>
                 </tr>
               @empty
                 <tr>
                   <td colspan="7" class="text-center py-4">
-                    <p class="mb-0">Aucune dépense trouvée. <a href="{{ route('expenses.create', $project) }}">Créer une dépense</a></p>
+                    <p class="mb-0">Aucune dépense trouvée.
+                      @if(auth()->user()->canManageProject($project, 'edit') || auth()->user()->hasRoleInCompany('admin') || auth()->user()->hasPermission('expenses.manage'))
+                        <a href="{{ route('expenses.create', $project) }}">Créer une dépense</a>
+                      @endif
+                    </p>
                   </td>
                 </tr>
               @endforelse

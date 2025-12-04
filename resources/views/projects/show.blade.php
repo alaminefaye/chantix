@@ -158,9 +158,11 @@
 
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h6 class="fw-semibold mb-0">Matériaux du projet</h6>
-          <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addMaterialModal">
-            <i class="ti ti-plus me-1"></i>Ajouter un matériau
-          </button>
+          @if(auth()->user()->canManageProject($project, 'edit') || auth()->user()->hasRoleInCompany('admin') || auth()->user()->hasPermission('materials.manage'))
+            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addMaterialModal">
+              <i class="ti ti-plus me-1"></i>Ajouter un matériau
+            </button>
+          @endif
         </div>
 
         @if($project->materials->count() > 0)
@@ -230,14 +232,18 @@
                     </td>
                     <td class="border-bottom-0">
                       <div class="d-flex gap-2">
-                        @if($pivot->quantity_remaining > 0)
-                          <a href="{{ route('projects.materials.transfer', ['project' => $project, 'material' => $material]) }}" class="btn btn-sm btn-info" title="Transférer vers un autre projet">
-                            <i class="ti ti-arrow-right"></i>
-                          </a>
+                        @if(auth()->user()->canManageProject($project, 'edit') || auth()->user()->hasRoleInCompany('admin') || auth()->user()->hasPermission('materials.manage'))
+                          @if($pivot->quantity_remaining > 0)
+                            <a href="{{ route('projects.materials.transfer', ['project' => $project, 'material' => $material]) }}" class="btn btn-sm btn-info" title="Transférer vers un autre projet">
+                              <i class="ti ti-arrow-right"></i>
+                            </a>
+                          @endif
+                          <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#updateMaterialModal{{ $material->id }}">
+                            <i class="ti ti-edit"></i>
+                          </button>
+                        @else
+                          <span class="text-muted">-</span>
                         @endif
-                        <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#updateMaterialModal{{ $material->id }}">
-                          <i class="ti ti-edit"></i>
-                        </button>
                       </div>
                     </td>
                   </tr>
@@ -254,9 +260,11 @@
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h6 class="fw-semibold mb-0">Employés affectés</h6>
           <div class="d-flex gap-2">
-            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#assignEmployeeModal">
-              <i class="ti ti-plus me-1"></i>Affecter un employé
-            </button>
+            @if(auth()->user()->canManageProject($project, 'edit') || auth()->user()->hasRoleInCompany('admin') || auth()->user()->hasPermission('projects.manage_team'))
+              <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#assignEmployeeModal">
+                <i class="ti ti-plus me-1"></i>Affecter un employé
+              </button>
+            @endif
             <a href="{{ route('attendances.index', $project) }}" class="btn btn-sm btn-info">
               <i class="ti ti-clock me-1"></i>Pointage
             </a>
@@ -313,13 +321,17 @@
                       @endif
                     </td>
                     <td class="border-bottom-0">
-                      @if($employee->pivot->is_active)
-                        <form action="{{ route('projects.employees.remove', ['project' => $project, 'employee' => $employee]) }}" method="POST" onsubmit="return confirm('Retirer cet employé du projet ?');" class="d-inline">
-                          @csrf
-                          <button type="submit" class="btn btn-sm btn-danger">
-                            <i class="ti ti-user-minus"></i>
-                          </button>
-                        </form>
+                      @if(auth()->user()->canManageProject($project, 'edit') || auth()->user()->hasRoleInCompany('admin') || auth()->user()->hasPermission('projects.manage_team'))
+                        @if($employee->pivot->is_active)
+                          <form action="{{ route('projects.employees.remove', ['project' => $project, 'employee' => $employee]) }}" method="POST" onsubmit="return confirm('Retirer cet employé du projet ?');" class="d-inline">
+                            @csrf
+                            <button type="submit" class="btn btn-sm btn-danger">
+                              <i class="ti ti-user-minus"></i>
+                            </button>
+                          </form>
+                        @endif
+                      @else
+                        <span class="text-muted">-</span>
                       @endif
                     </td>
                   </tr>
@@ -420,6 +432,7 @@
 </div>
 
 <!-- Modal Ajouter Matériau -->
+@if(auth()->user()->canManageProject($project, 'edit') || auth()->user()->hasRoleInCompany('admin') || auth()->user()->hasPermission('materials.manage'))
 <div class="modal fade" id="addMaterialModal" tabindex="-1" aria-labelledby="addMaterialModalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -469,8 +482,10 @@
     </div>
   </div>
 </div>
+@endif
 
 <!-- Modals Mettre à jour Matériau -->
+@if(auth()->user()->canManageProject($project, 'edit') || auth()->user()->hasRoleInCompany('admin') || auth()->user()->hasPermission('materials.manage'))
 @foreach($project->materials as $material)
   <div class="modal fade" id="updateMaterialModal{{ $material->id }}" tabindex="-1" aria-labelledby="updateMaterialModalLabel{{ $material->id }}" aria-hidden="true">
     <div class="modal-dialog">
@@ -519,12 +534,14 @@
             <button type="submit" class="btn btn-primary">Mettre à jour</button>
           </div>
         </form>
-      </div>
     </div>
   </div>
+</div>
 @endforeach
+@endif
 
 <!-- Modal Affecter Employé -->
+@if(auth()->user()->canManageProject($project, 'edit') || auth()->user()->hasRoleInCompany('admin') || auth()->user()->hasPermission('projects.manage_team'))
 <div class="modal fade" id="assignEmployeeModal" tabindex="-1" aria-labelledby="assignEmployeeModalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -582,6 +599,7 @@
     </div>
   </div>
 </div>
+@endif
 @if(isset($expensesByType) && count($expensesByType) > 0)
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

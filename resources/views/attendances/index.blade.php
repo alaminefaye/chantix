@@ -13,9 +13,11 @@
             <p class="text-muted mb-0">Date: {{ \Carbon\Carbon::parse($date)->format('d/m/Y') }}</p>
           </div>
           <div class="d-flex gap-2">
-            <a href="{{ route('attendances.create', $project) }}?date={{ $date }}" class="btn btn-primary">
-              <i class="ti ti-plus me-2"></i>Nouveau pointage
-            </a>
+            @if(auth()->user()->canManageProject($project, 'edit') || auth()->user()->hasRoleInCompany('admin') || auth()->user()->hasPermission('attendances.manage'))
+              <a href="{{ route('attendances.create', $project) }}?date={{ $date }}" class="btn btn-primary">
+                <i class="ti ti-plus me-2"></i>Nouveau pointage
+              </a>
+            @endif
             <a href="{{ route('projects.show', $project) }}" class="btn btn-secondary">Retour</a>
           </div>
         </div>
@@ -156,16 +158,20 @@
                   </td>
                   <td class="border-bottom-0">
                     <div class="d-flex align-items-center gap-2">
-                      <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editModal{{ $attendance->id }}">
-                        <i class="ti ti-edit"></i>
-                      </button>
-                      <form action="{{ route('attendances.destroy', ['project' => $project, 'attendance' => $attendance]) }}" method="POST" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce pointage ?');">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" class="btn btn-sm btn-danger">
-                          <i class="ti ti-trash"></i>
+                      @if(auth()->user()->canManageProject($project, 'edit') || auth()->user()->hasRoleInCompany('admin') || auth()->user()->hasPermission('attendances.manage'))
+                        <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editModal{{ $attendance->id }}">
+                          <i class="ti ti-edit"></i>
                         </button>
-                      </form>
+                        <form action="{{ route('attendances.destroy', ['project' => $project, 'attendance' => $attendance]) }}" method="POST" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce pointage ?');">
+                          @csrf
+                          @method('DELETE')
+                          <button type="submit" class="btn btn-sm btn-danger">
+                            <i class="ti ti-trash"></i>
+                          </button>
+                        </form>
+                      @else
+                        <span class="text-muted">Aucune action disponible</span>
+                      @endif
                     </div>
                   </td>
                 </tr>

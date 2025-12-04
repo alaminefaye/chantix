@@ -13,10 +13,12 @@
             <a href="{{ route('invitations.index', $company) }}" class="btn btn-secondary">
               <i class="ti ti-arrow-left me-2"></i>Retour
             </a>
-            @if($invitation->status === 'pending' && !$invitation->isExpired())
-              <a href="{{ route('invitations.edit', ['company' => $company, 'invitation' => $invitation]) }}" class="btn btn-warning">
-                <i class="ti ti-edit me-2"></i>Modifier
-              </a>
+            @if(auth()->user()->hasRoleInCompany('admin', $company->id))
+              @if($invitation->status === 'pending' && !$invitation->isExpired())
+                <a href="{{ route('invitations.edit', ['company' => $company, 'invitation' => $invitation]) }}" class="btn btn-warning">
+                  <i class="ti ti-edit me-2"></i>Modifier
+                </a>
+              @endif
             @endif
           </div>
         </div>
@@ -121,22 +123,24 @@
           </div>
         </div>
 
-        @if($invitation->status === 'pending' && !$invitation->isExpired())
-          <div class="mt-4 d-flex gap-2">
-            <form action="{{ route('invitations.resend', ['company' => $company, 'invitation' => $invitation]) }}" method="POST" class="d-inline">
-              @csrf
-              <button type="submit" class="btn btn-info">
-                <i class="ti ti-refresh me-2"></i>Renvoyer l'invitation
-              </button>
-            </form>
-            <form action="{{ route('invitations.destroy', ['company' => $company, 'invitation' => $invitation]) }}" method="POST" onsubmit="return confirm('Annuler cette invitation ?');" class="d-inline">
-              @csrf
-              @method('DELETE')
-              <button type="submit" class="btn btn-danger">
-                <i class="ti ti-trash me-2"></i>Annuler l'invitation
-              </button>
-            </form>
-          </div>
+        @if(auth()->user()->hasRoleInCompany('admin', $company->id))
+          @if($invitation->status === 'pending' && !$invitation->isExpired())
+            <div class="mt-4 d-flex gap-2">
+              <form action="{{ route('invitations.resend', ['company' => $company, 'invitation' => $invitation]) }}" method="POST" class="d-inline">
+                @csrf
+                <button type="submit" class="btn btn-info">
+                  <i class="ti ti-refresh me-2"></i>Renvoyer l'invitation
+                </button>
+              </form>
+              <form action="{{ route('invitations.destroy', ['company' => $company, 'invitation' => $invitation]) }}" method="POST" onsubmit="return confirm('Annuler cette invitation ?');" class="d-inline">
+                @csrf
+                @method('DELETE')
+                <button type="submit" class="btn btn-danger">
+                  <i class="ti ti-trash me-2"></i>Annuler l'invitation
+                </button>
+              </form>
+            </div>
+          @endif
         @endif
       </div>
     </div>
