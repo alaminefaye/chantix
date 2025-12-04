@@ -128,7 +128,18 @@ class User extends Authenticatable implements MustVerifyEmail
             return false;
         }
         
-        $role = $this->roleInCompany($companyId);
+        // Vérifier directement dans la table pivot pour plus de fiabilité
+        $pivot = $this->companies()
+            ->where('companies.id', $companyId)
+            ->first()
+            ?->pivot;
+        
+        if (!$pivot || !$pivot->role_id) {
+            return false;
+        }
+        
+        // Récupérer le rôle
+        $role = Role::find($pivot->role_id);
         
         return $role && $role->name === $roleName;
     }

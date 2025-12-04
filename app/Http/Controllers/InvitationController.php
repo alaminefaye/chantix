@@ -30,12 +30,12 @@ class InvitationController extends Controller
             return view('invitations.index', compact('company', 'invitations'));
         }
 
-        // Vérifier que l'utilisateur peut accéder à cette company
-        if (!$user->canAccessCompanyResource($company->id)) {
-            abort(403, 'Accès non autorisé.');
+        // Vérifier que l'utilisateur appartient à cette company
+        if (!$user->companies()->where('companies.id', $company->id)->exists()) {
+            abort(403, 'Vous n\'appartenez pas à cette entreprise.');
         }
 
-        // Vérifier que l'utilisateur est admin
+        // Vérifier que l'utilisateur est admin dans cette company
         if (!$user->hasRoleInCompany('admin', $company->id)) {
             abort(403, 'Seuls les administrateurs peuvent gérer les invitations.');
         }
@@ -61,12 +61,12 @@ class InvitationController extends Controller
             return view('invitations.create', compact('company', 'roles'));
         }
 
-        // Vérifier que l'utilisateur peut accéder à cette company
-        if (!$user->canAccessCompanyResource($company->id)) {
-            abort(403, 'Accès non autorisé.');
+        // Vérifier que l'utilisateur appartient à cette company
+        if (!$user->companies()->where('companies.id', $company->id)->exists()) {
+            abort(403, 'Vous n\'appartenez pas à cette entreprise.');
         }
 
-        // Vérifier que l'utilisateur est admin
+        // Vérifier que l'utilisateur est admin dans cette company
         if (!$user->hasRoleInCompany('admin', $company->id)) {
             abort(403, 'Seuls les administrateurs peuvent inviter des utilisateurs.');
         }
@@ -85,14 +85,12 @@ class InvitationController extends Controller
         $user = Auth::user();
 
         // Super admin peut accéder à tout
-        $isAuthorized = $user->isSuperAdmin();
-        
-        if (!$isAuthorized) {
-            // Vérifier que l'utilisateur peut accéder à cette company
-            if (!$user->canAccessCompanyResource($company->id)) {
-                abort(403, 'Accès non autorisé.');
+        if (!$user->isSuperAdmin()) {
+            // Vérifier que l'utilisateur appartient à cette company
+            if (!$user->companies()->where('companies.id', $company->id)->exists()) {
+                abort(403, 'Vous n\'appartenez pas à cette entreprise.');
             }
-            // Vérifier que l'utilisateur est admin
+            // Vérifier que l'utilisateur est admin dans cette company
             if (!$user->hasRoleInCompany('admin', $company->id)) {
                 abort(403, 'Seuls les administrateurs peuvent inviter des utilisateurs.');
             }
@@ -270,12 +268,12 @@ class InvitationController extends Controller
             return view('invitations.show', compact('company', 'invitation'));
         }
 
-        // Vérifier que l'utilisateur peut accéder à cette company
-        if (!$user->canAccessCompanyResource($company->id)) {
-            abort(403, 'Accès non autorisé.');
+        // Vérifier que l'utilisateur appartient à cette company
+        if (!$user->companies()->where('companies.id', $company->id)->exists()) {
+            abort(403, 'Vous n\'appartenez pas à cette entreprise.');
         }
 
-        // Vérifier que l'utilisateur est admin
+        // Vérifier que l'utilisateur est admin dans cette company
         if (!$user->hasRoleInCompany('admin', $company->id)) {
             abort(403, 'Seuls les administrateurs peuvent voir les détails des invitations.');
         }
@@ -308,12 +306,12 @@ class InvitationController extends Controller
             return view('invitations.edit', compact('company', 'invitation', 'roles'));
         }
 
-        // Vérifier que l'utilisateur peut accéder à cette company
-        if (!$user->canAccessCompanyResource($company->id)) {
-            abort(403, 'Accès non autorisé.');
+        // Vérifier que l'utilisateur appartient à cette company
+        if (!$user->companies()->where('companies.id', $company->id)->exists()) {
+            abort(403, 'Vous n\'appartenez pas à cette entreprise.');
         }
 
-        // Vérifier que l'utilisateur est admin
+        // Vérifier que l'utilisateur est admin dans cette company
         if (!$user->hasRoleInCompany('admin', $company->id)) {
             abort(403, 'Seuls les administrateurs peuvent modifier des invitations.');
         }
@@ -342,14 +340,12 @@ class InvitationController extends Controller
         }
 
         // Super admin peut accéder à tout
-        $isAuthorized = $user->isSuperAdmin();
-        
-        if (!$isAuthorized) {
-            // Vérifier que l'utilisateur peut accéder à cette company
-            if (!$user->canAccessCompanyResource($company->id)) {
-                abort(403, 'Accès non autorisé.');
+        if (!$user->isSuperAdmin()) {
+            // Vérifier que l'utilisateur appartient à cette company
+            if (!$user->companies()->where('companies.id', $company->id)->exists()) {
+                abort(403, 'Vous n\'appartenez pas à cette entreprise.');
             }
-            // Vérifier que l'utilisateur est admin
+            // Vérifier que l'utilisateur est admin dans cette company
             if (!$user->hasRoleInCompany('admin', $company->id)) {
                 abort(403, 'Seuls les administrateurs peuvent modifier des invitations.');
             }
@@ -408,12 +404,12 @@ class InvitationController extends Controller
                 ->with('success', 'Invitation supprimée avec succès.');
         }
 
-        // Vérifier que l'utilisateur peut accéder à cette company
-        if (!$user->canAccessCompanyResource($company->id)) {
-            abort(403, 'Accès non autorisé.');
+        // Vérifier que l'utilisateur appartient à cette company
+        if (!$user->companies()->where('companies.id', $company->id)->exists()) {
+            abort(403, 'Vous n\'appartenez pas à cette entreprise.');
         }
 
-        // Vérifier que l'utilisateur est admin
+        // Vérifier que l'utilisateur est admin dans cette company
         if (!$user->hasRoleInCompany('admin', $company->id)) {
             abort(403, 'Seuls les administrateurs peuvent supprimer des invitations.');
         }
@@ -438,14 +434,12 @@ class InvitationController extends Controller
         }
 
         // Super admin peut accéder à tout
-        $isAuthorized = $user->isSuperAdmin();
-        
-        if (!$isAuthorized) {
-            // Vérifier que l'utilisateur peut accéder à cette company
-            if (!$user->canAccessCompanyResource($company->id)) {
-                abort(403, 'Accès non autorisé.');
+        if (!$user->isSuperAdmin()) {
+            // Vérifier que l'utilisateur appartient à cette company
+            if (!$user->companies()->where('companies.id', $company->id)->exists()) {
+                abort(403, 'Vous n\'appartenez pas à cette entreprise.');
             }
-            // Vérifier que l'utilisateur est admin
+            // Vérifier que l'utilisateur est admin dans cette company
             if (!$user->hasRoleInCompany('admin', $company->id)) {
                 abort(403, 'Seuls les administrateurs peuvent renvoyer des invitations.');
             }
