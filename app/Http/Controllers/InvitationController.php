@@ -97,12 +97,23 @@ class InvitationController extends Controller
 
         $validated = $request->validate([
             'email' => 'required|email|max:255',
-            'role_id' => 'required|exists:roles,id',
+            'role_id' => 'required|integer|exists:roles,id',
             'message' => 'nullable|string|max:1000',
             'create_directly' => 'nullable|boolean', // Option pour créer directement
             'name' => 'nullable|string|max:255|required_if:create_directly,1',
             'password' => 'nullable|string|min:8|required_if:create_directly,1',
         ]);
+        
+        // Convertir role_id en entier pour éviter les problèmes de type
+        $validated['role_id'] = (int) $validated['role_id'];
+        
+        // Vérifier que le rôle existe vraiment
+        $role = Role::find($validated['role_id']);
+        if (!$role) {
+            return redirect()->back()
+                ->withErrors(['role_id' => 'Le rôle sélectionné n\'existe pas.'])
+                ->withInput();
+        }
 
         // Vérifier si l'utilisateur existe déjà dans l'entreprise
         $existingUser = User::where('email', $validated['email'])->first();
@@ -370,9 +381,20 @@ class InvitationController extends Controller
 
         $validated = $request->validate([
             'email' => 'required|email|max:255',
-            'role_id' => 'required|exists:roles,id',
+            'role_id' => 'required|integer|exists:roles,id',
             'message' => 'nullable|string|max:1000',
         ]);
+        
+        // Convertir role_id en entier pour éviter les problèmes de type
+        $validated['role_id'] = (int) $validated['role_id'];
+        
+        // Vérifier que le rôle existe vraiment
+        $role = Role::find($validated['role_id']);
+        if (!$role) {
+            return redirect()->back()
+                ->withErrors(['role_id' => 'Le rôle sélectionné n\'existe pas.'])
+                ->withInput();
+        }
 
         // Vérifier si l'email a changé et s'il existe déjà une invitation en attente pour ce nouvel email
         if ($validated['email'] !== $invitation->email) {
