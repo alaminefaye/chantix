@@ -24,13 +24,6 @@ class RolePermissionSeeder extends Seeder
                 'description' => 'Accès complet à toutes les fonctionnalités de toutes les entreprises',
             ]
         );
-        // Recharger le modèle pour initialiser les relations
-        $superAdminRole->refresh();
-        // Le super admin a toutes les permissions
-        $allPermissions = Permission::where('guard_name', 'web')->pluck('name')->toArray();
-        if (!empty($allPermissions)) {
-            $superAdminRole->syncPermissions($allPermissions);
-        }
         
         // Créer les rôles Spatie avec le guard 'web'
         $adminRole = Role::firstOrCreate(
@@ -76,19 +69,27 @@ class RolePermissionSeeder extends Seeder
             ]
         );
 
-
-        // Recharger les modèles pour initialiser les relations
-        $adminRole->refresh();
-        $chefChantierRole->refresh();
-        $ingenieurRole->refresh();
-        $ouvrierRole->refresh();
-        $comptableRole->refresh();
-        $superviseurRole->refresh();
-
-        // Admin : toutes les permissions (avec le guard 'web')
+        // Récupérer toutes les permissions
         $allPermissions = Permission::where('guard_name', 'web')->pluck('name')->toArray();
+        
+        // Super admin et Admin : toutes les permissions
         if (!empty($allPermissions)) {
-            $adminRole->syncPermissions($allPermissions);
+            // Utiliser givePermissionTo avec un tableau de noms (une permission à la fois pour éviter le problème)
+            foreach ($allPermissions as $permissionName) {
+                try {
+                    $superAdminRole->givePermissionTo($permissionName);
+                } catch (\Exception $e) {
+                    // Ignorer si la permission existe déjà
+                }
+            }
+            
+            foreach ($allPermissions as $permissionName) {
+                try {
+                    $adminRole->givePermissionTo($permissionName);
+                } catch (\Exception $e) {
+                    // Ignorer si la permission existe déjà
+                }
+            }
         }
 
         // Chef de Chantier
