@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use App\Models\Role;
 use Spatie\Permission\Models\Permission;
 
@@ -69,31 +70,52 @@ class RolePermissionSeeder extends Seeder
             ]
         );
 
-        // Récupérer toutes les permissions
-        $allPermissions = Permission::where('guard_name', 'web')->pluck('name')->toArray();
+        // Définir le guard name
+        $guardName = 'web';
+        
+        // Récupérer toutes les permissions avec leurs IDs
+        $allPermissionIds = Permission::where('guard_name', $guardName)->pluck('id')->toArray();
         
         // Super admin et Admin : toutes les permissions
-        if (!empty($allPermissions)) {
-            // Utiliser givePermissionTo avec un tableau de noms (une permission à la fois pour éviter le problème)
-            foreach ($allPermissions as $permissionName) {
-                try {
-                    $superAdminRole->givePermissionTo($permissionName);
-                } catch (\Exception $e) {
-                    // Ignorer si la permission existe déjà
-                }
+        // Utiliser directement DB pour insérer dans la table pivot (évite le problème de relation null)
+        if (!empty($allPermissionIds)) {
+            // Pour super_admin - insérer directement dans role_has_permissions
+            foreach ($allPermissionIds as $permissionId) {
+                DB::table('role_has_permissions')->insertOrIgnore([
+                    'permission_id' => $permissionId,
+                    'role_id' => $superAdminRole->id,
+                    'guard_name' => $guardName,
+                ]);
             }
             
-            foreach ($allPermissions as $permissionName) {
-                try {
-                    $adminRole->givePermissionTo($permissionName);
-                } catch (\Exception $e) {
-                    // Ignorer si la permission existe déjà
-                }
+            // Pour admin - insérer directement dans role_has_permissions
+            foreach ($allPermissionIds as $permissionId) {
+                DB::table('role_has_permissions')->insertOrIgnore([
+                    'permission_id' => $permissionId,
+                    'role_id' => $adminRole->id,
+                    'guard_name' => $guardName,
+                ]);
             }
         }
 
+        // Fonction helper pour assigner des permissions via DB
+        $assignPermissions = function($role, $permissionNames) use ($guardName) {
+            $permissionIds = Permission::whereIn('name', $permissionNames)
+                ->where('guard_name', $guardName)
+                ->pluck('id')
+                ->toArray();
+            
+            foreach ($permissionIds as $permissionId) {
+                DB::table('role_has_permissions')->insertOrIgnore([
+                    'permission_id' => $permissionId,
+                    'role_id' => $role->id,
+                    'guard_name' => $guardName,
+                ]);
+            }
+        };
+
         // Chef de Chantier
-        $chefChantierRole->givePermissionTo([
+        $assignPermissions($chefChantierRole, [
             'dashboard.view',
             'projects.view',
             'projects.create',
@@ -127,7 +149,7 @@ class RolePermissionSeeder extends Seeder
         ]);
 
         // Ingénieur
-        $ingenieurRole->givePermissionTo([
+        $assignPermissions($ingenieurRole, [
             'dashboard.view',
             'projects.view',
             'projects.timeline',
@@ -144,7 +166,7 @@ class RolePermissionSeeder extends Seeder
         ]);
 
         // Ouvrier
-        $ouvrierRole->givePermissionTo([
+        $assignPermissions($ouvrierRole, [
             'dashboard.view',
             'projects.view',
             'progress.view',
@@ -161,7 +183,7 @@ class RolePermissionSeeder extends Seeder
         ]);
 
         // Comptable
-        $comptableRole->givePermissionTo([
+        $assignPermissions($comptableRole, [
             'dashboard.view',
             'projects.view',
             'expenses.view',
@@ -179,7 +201,7 @@ class RolePermissionSeeder extends Seeder
         ]);
 
         // Superviseur
-        $superviseurRole->givePermissionTo([
+        $assignPermissions($superviseurRole, [
             'dashboard.view',
             'projects.view',
             'projects.validate',
