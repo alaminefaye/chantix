@@ -35,7 +35,13 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'apiIndex']);
     
     // Projets
-    Route::apiResource('projects', \App\Http\Controllers\Api\ProjectController::class);
+    Route::apiResource('projects', \App\Http\Controllers\Api\ProjectController::class)->names([
+        'index' => 'api.projects.index',
+        'store' => 'api.projects.store',
+        'show' => 'api.projects.show',
+        'update' => 'api.projects.update',
+        'destroy' => 'api.projects.destroy',
+    ]);
     
     // Pointage
     Route::prefix('projects/{project}')->group(function () {
@@ -53,10 +59,22 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     });
     
     // Matériaux
-    Route::apiResource('materials', \App\Http\Controllers\Api\MaterialController::class);
+    Route::apiResource('materials', \App\Http\Controllers\Api\MaterialController::class)->names([
+        'index' => 'api.materials.index',
+        'store' => 'api.materials.store',
+        'show' => 'api.materials.show',
+        'update' => 'api.materials.update',
+        'destroy' => 'api.materials.destroy',
+    ]);
     
     // Employés
-    Route::apiResource('employees', \App\Http\Controllers\Api\EmployeeController::class);
+    Route::apiResource('employees', \App\Http\Controllers\Api\EmployeeController::class)->names([
+        'index' => 'api.employees.index',
+        'store' => 'api.employees.store',
+        'show' => 'api.employees.show',
+        'update' => 'api.employees.update',
+        'destroy' => 'api.employees.destroy',
+    ]);
     
     // Dépenses
     Route::get('/expenses', [\App\Http\Controllers\Api\ExpenseController::class, 'index']);

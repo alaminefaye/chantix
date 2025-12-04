@@ -61,12 +61,28 @@ Route::middleware(['auth', 'verified', 'company'])->group(function () {
     Route::get('/invitations/accept/{token}', [\App\Http\Controllers\InvitationController::class, 'accept'])->name('invitations.accept');
     
     // Projects
-    Route::resource('projects', ProjectController::class);
+    Route::resource('projects', ProjectController::class)->names([
+        'index' => 'projects.index',
+        'create' => 'projects.create',
+        'store' => 'projects.store',
+        'show' => 'projects.show',
+        'edit' => 'projects.edit',
+        'update' => 'projects.update',
+        'destroy' => 'projects.destroy',
+    ]);
     Route::get('/projects/{project}/timeline', [ProjectController::class, 'timeline'])->name('projects.timeline');
     Route::get('/projects/{project}/gallery', [ProjectController::class, 'gallery'])->name('projects.gallery');
     
     // Materials
-    Route::resource('materials', \App\Http\Controllers\MaterialController::class);
+    Route::resource('materials', \App\Http\Controllers\MaterialController::class)->names([
+        'index' => 'materials.index',
+        'create' => 'materials.create',
+        'store' => 'materials.store',
+        'show' => 'materials.show',
+        'edit' => 'materials.edit',
+        'update' => 'materials.update',
+        'destroy' => 'materials.destroy',
+    ]);
     Route::get('/materials/import', [\App\Http\Controllers\MaterialController::class, 'showImport'])->name('materials.import');
     Route::post('/materials/import', [\App\Http\Controllers\MaterialController::class, 'import'])->name('materials.import.store');
     Route::get('/materials/template/download', [\App\Http\Controllers\MaterialController::class, 'downloadTemplate'])->name('materials.template.download');
@@ -76,7 +92,15 @@ Route::middleware(['auth', 'verified', 'company'])->group(function () {
     Route::post('/projects/{project}/materials/{material}/transfer', [\App\Http\Controllers\MaterialController::class, 'transfer'])->name('projects.materials.transfer.store');
     
     // Employees
-    Route::resource('employees', \App\Http\Controllers\EmployeeController::class);
+    Route::resource('employees', \App\Http\Controllers\EmployeeController::class)->names([
+        'index' => 'employees.index',
+        'create' => 'employees.create',
+        'store' => 'employees.store',
+        'show' => 'employees.show',
+        'edit' => 'employees.edit',
+        'update' => 'employees.update',
+        'destroy' => 'employees.destroy',
+    ]);
     Route::get('/employees/import', [\App\Http\Controllers\EmployeeController::class, 'showImport'])->name('employees.import');
     Route::post('/employees/import', [\App\Http\Controllers\EmployeeController::class, 'import'])->name('employees.import.store');
     Route::get('/employees/template/download', [\App\Http\Controllers\EmployeeController::class, 'downloadTemplate'])->name('employees.template.download');
