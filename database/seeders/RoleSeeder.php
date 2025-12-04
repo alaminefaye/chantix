@@ -87,7 +87,10 @@ class RoleSeeder extends Seeder
         ];
 
         foreach ($roles as $role) {
-            Role::create($role);
+            Role::updateOrCreate(
+                ['name' => $role['name']], // Recherche par nom
+                $role // Données à créer/mettre à jour
+            );
         }
     }
 }
