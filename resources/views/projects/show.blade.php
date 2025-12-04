@@ -10,9 +10,11 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
           <h5 class="card-title fw-semibold mb-0">{{ $project->name }}</h5>
           <div class="d-flex gap-2">
-            <a href="{{ route('projects.edit', $project) }}" class="btn btn-warning">
-              <i class="ti ti-edit me-2"></i>Modifier
-            </a>
+            @if(auth()->user()->canManageProject($project, 'edit') || auth()->user()->hasRoleInCompany('admin'))
+              <a href="{{ route('projects.edit', $project) }}" class="btn btn-warning">
+                <i class="ti ti-edit me-2"></i>Modifier
+              </a>
+            @endif
             <a href="{{ route('projects.index') }}" class="btn btn-secondary">Retour</a>
           </div>
         </div>

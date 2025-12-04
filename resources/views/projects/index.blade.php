@@ -16,9 +16,11 @@
             <a href="{{ route('projects.index', array_merge(request()->all(), ['view' => 'map'])) }}" class="btn btn-sm btn-outline-primary {{ ($view ?? 'list') === 'map' ? 'active' : '' }}">
               <i class="ti ti-map me-1"></i>Carte
             </a>
-            <a href="{{ route('projects.create') }}" class="btn btn-primary">
-              <i class="ti ti-plus me-2"></i>Créer un projet
-            </a>
+            @if(auth()->user()->hasPermission('projects.create') || auth()->user()->hasRoleInCompany('admin'))
+              <a href="{{ route('projects.create') }}" class="btn btn-primary">
+                <i class="ti ti-plus me-2"></i>Créer un projet
+              </a>
+            @endif
           </div>
         </div>
 
@@ -115,7 +117,10 @@
               <div class="col-12">
                 <div class="alert alert-info">
                   <i class="ti ti-info-circle me-2"></i>
-                  Aucun projet avec coordonnées GPS trouvé. <a href="{{ route('projects.create') }}">Créer un projet</a>
+                  Aucun projet avec coordonnées GPS trouvé.
+                  @if(auth()->user()->hasPermission('projects.create') || auth()->user()->hasRoleInCompany('admin'))
+                    <a href="{{ route('projects.create') }}">Créer un projet</a>
+                  @endif
                 </div>
               </div>
             @endforelse
@@ -196,14 +201,20 @@
                   <td class="border-bottom-0">
                     <div class="d-flex align-items-center gap-2">
                       <a href="{{ route('projects.show', $project) }}" class="btn btn-sm btn-info">Voir</a>
-                      <a href="{{ route('projects.edit', $project) }}" class="btn btn-sm btn-warning">Modifier</a>
+                      @if(auth()->user()->canManageProject($project, 'edit') || auth()->user()->hasRoleInCompany('admin'))
+                        <a href="{{ route('projects.edit', $project) }}" class="btn btn-sm btn-warning">Modifier</a>
+                      @endif
                     </div>
                   </td>
                 </tr>
               @empty
                 <tr>
                   <td colspan="6" class="text-center py-4">
-                    <p class="mb-0">Aucun projet trouvé. <a href="{{ route('projects.create') }}">Créer un projet</a></p>
+                    <p class="mb-0">Aucun projet trouvé.
+                      @if(auth()->user()->hasPermission('projects.create') || auth()->user()->hasRoleInCompany('admin'))
+                        <a href="{{ route('projects.create') }}">Créer un projet</a>
+                      @endif
+                    </p>
                   </td>
                 </tr>
               @endforelse
