@@ -4,6 +4,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\ProjectController;
+use App\Models\Company;
+use App\Models\Invitation;
 
 Route::get('/', function () {
     return redirect()->route('dashboard');
@@ -53,6 +55,11 @@ Route::middleware(['auth', 'verified', 'company'])->group(function () {
         Route::get('/invitations/{invitation}', [\App\Http\Controllers\InvitationController::class, 'show'])->name('show');
         Route::get('/invitations/{invitation}/edit', [\App\Http\Controllers\InvitationController::class, 'edit'])->name('edit');
         Route::put('/invitations/{invitation}', [\App\Http\Controllers\InvitationController::class, 'update'])->name('update');
+        // Route GET pour rediriger vers la page show si quelqu'un accède directement via GET
+        Route::get('/invitations/{invitation}/resend', function (Company $company, Invitation $invitation) {
+            return redirect()->route('invitations.show', ['company' => $company, 'invitation' => $invitation])
+                ->with('info', 'Veuillez utiliser le bouton "Renvoyer" sur la page pour renvoyer l\'invitation.');
+        })->name('resend.get');
         Route::post('/invitations/{invitation}/resend', [\App\Http\Controllers\InvitationController::class, 'resend'])->name('resend');
         Route::delete('/invitations/{invitation}', [\App\Http\Controllers\InvitationController::class, 'destroy'])->name('destroy');
     });
