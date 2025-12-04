@@ -147,11 +147,20 @@ class AuthController extends Controller
                 ->with('success', $message);
         } else {
             // Créer l'entreprise
-            $company = Company::create([
-                'name' => $request->company_name,
-                'email' => $request->email,
-                'is_active' => true,
-            ]);
+            // Vérifier si une entreprise avec cet email existe déjà
+            $existingCompany = Company::where('email', $request->email)->first();
+            
+            if ($existingCompany) {
+                // Si l'entreprise existe déjà, attacher l'utilisateur à cette entreprise
+                $company = $existingCompany;
+            } else {
+                // Créer une nouvelle entreprise (sans email pour éviter les conflits)
+                $company = Company::create([
+                    'name' => $request->company_name,
+                    'email' => null, // Ne pas utiliser l'email utilisateur pour éviter les conflits
+                    'is_active' => true,
+                ]);
+            }
 
             // Attacher l'utilisateur à l'entreprise avec le rôle admin
             $adminRole = \App\Models\Role::where('name', 'admin')->first();
