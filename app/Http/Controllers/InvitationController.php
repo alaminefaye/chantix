@@ -29,7 +29,7 @@ class InvitationController extends Controller
                 'company_id' => $company->id,
                 'current_company_id' => $user->current_company_id,
                 'is_super_admin' => $user->isSuperAdmin(),
-                'user_companies' => $user->companies()->pluck('id')->toArray(),
+                'user_companies' => $user->companies()->get()->pluck('id')->toArray(),
             ]);
             abort(403, 'Accès non autorisé. Vous n\'appartenez pas à cette entreprise.');
         }
@@ -264,7 +264,7 @@ class InvitationController extends Controller
                 'company_id' => $company->id,
                 'current_company_id' => $user->current_company_id,
                 'is_super_admin' => $user->isSuperAdmin(),
-                'user_companies' => $user->companies()->pluck('id')->toArray(),
+                'user_companies' => $user->companies()->get()->pluck('id')->toArray(),
             ]);
             abort(403, 'Accès non autorisé. Vous n\'appartenez pas à cette entreprise.');
         }
@@ -301,7 +301,7 @@ class InvitationController extends Controller
                 'company_id' => $company->id,
                 'current_company_id' => $user->current_company_id,
                 'is_super_admin' => $user->isSuperAdmin(),
-                'user_companies' => $user->companies()->pluck('id')->toArray(),
+                'user_companies' => $user->companies()->get()->pluck('id')->toArray(),
             ]);
             abort(403, 'Accès non autorisé. Vous n\'appartenez pas à cette entreprise.');
         }
