@@ -22,12 +22,13 @@ class InvitationController extends Controller
         $user = Auth::user();
         $companyId = $user->current_company_id;
 
-        if ($company->id !== $companyId) {
+        // Super admin peut accéder à toutes les entreprises
+        if (!$user->canAccessCompanyResource($company->id)) {
             abort(403, 'Accès non autorisé.');
         }
 
-        // Vérifier que l'utilisateur est admin
-        if (!$user->hasRoleInCompany('admin', $companyId)) {
+        // Vérifier que l'utilisateur est admin ou super admin
+        if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $company->id)) {
             abort(403, 'Seuls les administrateurs peuvent gérer les invitations.');
         }
 
@@ -47,11 +48,13 @@ class InvitationController extends Controller
         $user = Auth::user();
         $companyId = $user->current_company_id;
 
-        if ($company->id !== $companyId) {
+        // Super admin peut accéder à toutes les entreprises
+        if (!$user->canAccessCompanyResource($company->id)) {
             abort(403, 'Accès non autorisé.');
         }
 
-        if (!$user->hasRoleInCompany('admin', $companyId)) {
+        // Vérifier que l'utilisateur est admin ou super admin
+        if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $company->id)) {
             abort(403, 'Seuls les administrateurs peuvent inviter des utilisateurs.');
         }
 
@@ -68,11 +71,13 @@ class InvitationController extends Controller
         $user = Auth::user();
         $companyId = $user->current_company_id;
 
-        if ($company->id !== $companyId) {
+        // Super admin peut accéder à toutes les entreprises
+        if (!$user->canAccessCompanyResource($company->id)) {
             abort(403, 'Accès non autorisé.');
         }
 
-        if (!$user->hasRoleInCompany('admin', $companyId)) {
+        // Vérifier que l'utilisateur est admin ou super admin
+        if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $company->id)) {
             abort(403, 'Seuls les administrateurs peuvent inviter des utilisateurs.');
         }
 
@@ -238,11 +243,13 @@ class InvitationController extends Controller
         $user = Auth::user();
         $companyId = $user->current_company_id;
 
-        if ($company->id !== $companyId || $invitation->company_id !== $company->id) {
+        // Super admin peut accéder à toutes les entreprises
+        if (!$user->canAccessCompanyResource($company->id) || $invitation->company_id !== $company->id) {
             abort(403, 'Accès non autorisé.');
         }
 
-        if (!$user->hasRoleInCompany('admin', $companyId)) {
+        // Vérifier que l'utilisateur est admin ou super admin
+        if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $company->id)) {
             abort(403, 'Seuls les administrateurs peuvent voir les détails des invitations.');
         }
 
@@ -259,11 +266,13 @@ class InvitationController extends Controller
         $user = Auth::user();
         $companyId = $user->current_company_id;
 
-        if ($company->id !== $companyId || $invitation->company_id !== $company->id) {
+        // Super admin peut accéder à toutes les entreprises
+        if (!$user->canAccessCompanyResource($company->id) || $invitation->company_id !== $company->id) {
             abort(403, 'Accès non autorisé.');
         }
 
-        if (!$user->hasRoleInCompany('admin', $companyId)) {
+        // Vérifier que l'utilisateur est admin ou super admin
+        if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $company->id)) {
             abort(403, 'Seuls les administrateurs peuvent modifier des invitations.');
         }
 
@@ -286,11 +295,13 @@ class InvitationController extends Controller
         $user = Auth::user();
         $companyId = $user->current_company_id;
 
-        if ($company->id !== $companyId || $invitation->company_id !== $company->id) {
+        // Super admin peut accéder à toutes les entreprises
+        if (!$user->canAccessCompanyResource($company->id) || $invitation->company_id !== $company->id) {
             abort(403, 'Accès non autorisé.');
         }
 
-        if (!$user->hasRoleInCompany('admin', $companyId)) {
+        // Vérifier que l'utilisateur est admin ou super admin
+        if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $company->id)) {
             abort(403, 'Seuls les administrateurs peuvent modifier des invitations.');
         }
 
@@ -336,11 +347,13 @@ class InvitationController extends Controller
         $user = Auth::user();
         $companyId = $user->current_company_id;
 
-        if ($company->id !== $companyId || $invitation->company_id !== $company->id) {
+        // Super admin peut accéder à toutes les entreprises
+        if (!$user->canAccessCompanyResource($company->id) || $invitation->company_id !== $company->id) {
             abort(403, 'Accès non autorisé.');
         }
 
-        if (!$user->hasRoleInCompany('admin', $companyId)) {
+        // Vérifier que l'utilisateur est admin ou super admin
+        if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $company->id)) {
             abort(403, 'Seuls les administrateurs peuvent supprimer des invitations.');
         }
 
@@ -359,11 +372,13 @@ class InvitationController extends Controller
         $user = Auth::user();
         $companyId = $user->current_company_id;
 
-        if ($company->id !== $companyId || $invitation->company_id !== $company->id) {
+        // Super admin peut accéder à toutes les entreprises
+        if (!$user->canAccessCompanyResource($company->id) || $invitation->company_id !== $company->id) {
             abort(403, 'Accès non autorisé.');
         }
 
-        if (!$user->hasRoleInCompany('admin', $companyId)) {
+        // Vérifier que l'utilisateur est admin ou super admin
+        if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $company->id)) {
             abort(403, 'Seuls les administrateurs peuvent renvoyer des invitations.');
         }
 

@@ -257,7 +257,12 @@ class User extends Authenticatable implements MustVerifyEmail
         }
         
         // Vérifier que l'utilisateur appartient à l'entreprise
-        return $companyId && $companyId === $this->current_company_id;
+        if (!$companyId) {
+            return false;
+        }
+        
+        // Vérifier si l'utilisateur appartient réellement à cette entreprise
+        return $this->companies()->where('companies.id', $companyId)->exists();
     }
 
     /**
