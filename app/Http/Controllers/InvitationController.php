@@ -246,7 +246,11 @@ class InvitationController extends Controller
             abort(403, 'Accès non autorisé.');
         }
 
-        if (!$user->hasRoleInCompany('admin', $company->id)) {
+        // Permettre l'accès si l'utilisateur est admin OU s'il a créé l'invitation
+        $isAdmin = $user->hasRoleInCompany('admin', $company->id) || $user->isSuperAdmin();
+        $isCreator = $invitation->invited_by === $user->id;
+        
+        if (!$isAdmin && !$isCreator) {
             abort(403, 'Seuls les administrateurs peuvent voir les détails des invitations.');
         }
 
@@ -271,7 +275,11 @@ class InvitationController extends Controller
             abort(403, 'Accès non autorisé.');
         }
 
-        if (!$user->hasRoleInCompany('admin', $company->id)) {
+        // Permettre l'accès si l'utilisateur est admin OU s'il a créé l'invitation
+        $isAdmin = $user->hasRoleInCompany('admin', $company->id) || $user->isSuperAdmin();
+        $isCreator = $invitation->invited_by === $user->id;
+        
+        if (!$isAdmin && !$isCreator) {
             abort(403, 'Seuls les administrateurs peuvent modifier des invitations.');
         }
 
@@ -302,7 +310,11 @@ class InvitationController extends Controller
             abort(403, 'Accès non autorisé.');
         }
 
-        if (!$user->hasRoleInCompany('admin', $company->id)) {
+        // Permettre l'accès si l'utilisateur est admin OU s'il a créé l'invitation
+        $isAdmin = $user->hasRoleInCompany('admin', $company->id) || $user->isSuperAdmin();
+        $isCreator = $invitation->invited_by === $user->id;
+        
+        if (!$isAdmin && !$isCreator) {
             abort(403, 'Seuls les administrateurs peuvent modifier des invitations.');
         }
 
@@ -356,7 +368,11 @@ class InvitationController extends Controller
             abort(403, 'Accès non autorisé.');
         }
 
-        if (!$user->hasRoleInCompany('admin', $company->id)) {
+        // Permettre l'accès si l'utilisateur est admin OU s'il a créé l'invitation
+        $isAdmin = $user->hasRoleInCompany('admin', $company->id) || $user->isSuperAdmin();
+        $isCreator = $invitation->invited_by === $user->id;
+        
+        if (!$isAdmin && !$isCreator) {
             abort(403, 'Seuls les administrateurs peuvent supprimer des invitations.');
         }
 
@@ -383,7 +399,11 @@ class InvitationController extends Controller
             abort(403, 'Accès non autorisé.');
         }
 
-        if (!$user->hasRoleInCompany('admin', $company->id)) {
+        // Permettre l'accès si l'utilisateur est admin OU s'il a créé l'invitation
+        $isAdmin = $user->hasRoleInCompany('admin', $company->id) || $user->isSuperAdmin();
+        $isCreator = $invitation->invited_by === $user->id;
+        
+        if (!$isAdmin && !$isCreator) {
             abort(403, 'Seuls les administrateurs peuvent renvoyer des invitations.');
         }
 

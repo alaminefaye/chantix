@@ -100,7 +100,13 @@
                   </td>
                   <td class="border-bottom-0">
                     <div class="d-flex align-items-center gap-2">
-                      @if(auth()->user()->hasRoleInCompany('admin', $company->id))
+                      @php
+                        $user = auth()->user();
+                        $isAdmin = $user->hasRoleInCompany('admin', $company->id) || $user->isSuperAdmin();
+                        $isCreator = $invitation->invited_by === $user->id;
+                        $canManage = $isAdmin || $isCreator;
+                      @endphp
+                      @if($canManage)
                         <a href="{{ route('invitations.show', ['company' => $company, 'invitation' => $invitation]) }}" class="btn btn-sm btn-info" title="Voir">
                           <i class="ti ti-eye"></i>
                         </a>

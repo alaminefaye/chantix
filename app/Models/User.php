@@ -93,6 +93,9 @@ class User extends Authenticatable implements MustVerifyEmail
             return null;
         }
         
+        // Recharger la relation pour éviter les problèmes de cache
+        $this->load('companies');
+        
         $pivot = $this->companies()
             ->where('companies.id', $companyId)
             ->first()
@@ -128,9 +131,17 @@ class User extends Authenticatable implements MustVerifyEmail
             return false;
         }
         
+        // Recharger la relation pour éviter les problèmes de cache
+        $this->load('companies');
+        
         $role = $this->roleInCompany($companyId);
         
-        return $role && $role->name === $roleName;
+        if (!$role) {
+            return false;
+        }
+        
+        // Vérifier le nom du rôle (insensible à la casse pour plus de robustesse)
+        return strtolower($role->name) === strtolower($roleName);
     }
 
     /**
