@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Support\Facades\DB;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -131,10 +132,14 @@ class User extends Authenticatable implements MustVerifyEmail
             return false;
         }
         
-        // Recharger la relation pour éviter les problèmes de cache
-        $this->load('companies');
-        
-        $role = $this->roleInCompany($companyId);
+        // Vérification directe dans la base de données pour éviter les problèmes de cache
+        $role = DB::table('company_user')
+            ->join('roles', 'company_user.role_id', '=', 'roles.id')
+            ->where('company_user.user_id', $this->id)
+            ->where('company_user.company_id', $companyId)
+            ->where('company_user.is_active', true)
+            ->select('roles.name', 'roles.id')
+            ->first();
         
         if (!$role) {
             return false;

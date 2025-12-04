@@ -247,11 +247,23 @@ class InvitationController extends Controller
         }
 
         // Permettre l'accès si l'utilisateur est admin OU s'il a créé l'invitation
-        $isAdmin = $user->hasRoleInCompany('admin', $company->id) || $user->isSuperAdmin();
-        $isCreator = $invitation->invited_by === $user->id;
+        $isSuperAdmin = $user->isSuperAdmin();
+        $isAdmin = $isSuperAdmin || $user->hasRoleInCompany('admin', $company->id);
+        $isCreator = $invitation->invited_by == $user->id; // Utiliser == au lieu de === pour éviter les problèmes de type
+        
+        // Log pour déboguer (à retirer en production)
+        \Log::info('Invitation access check', [
+            'user_id' => $user->id,
+            'invitation_id' => $invitation->id,
+            'invited_by' => $invitation->invited_by,
+            'isSuperAdmin' => $isSuperAdmin,
+            'isAdmin' => $isAdmin,
+            'isCreator' => $isCreator,
+            'company_id' => $company->id,
+        ]);
         
         if (!$isAdmin && !$isCreator) {
-            abort(403, 'Seuls les administrateurs peuvent voir les détails des invitations.');
+            abort(403, 'Seuls les administrateurs ou le créateur de l\'invitation peuvent voir les détails.');
         }
 
         $invitation->load('inviter', 'role', 'company');
@@ -276,11 +288,12 @@ class InvitationController extends Controller
         }
 
         // Permettre l'accès si l'utilisateur est admin OU s'il a créé l'invitation
-        $isAdmin = $user->hasRoleInCompany('admin', $company->id) || $user->isSuperAdmin();
-        $isCreator = $invitation->invited_by === $user->id;
+        $isSuperAdmin = $user->isSuperAdmin();
+        $isAdmin = $isSuperAdmin || $user->hasRoleInCompany('admin', $company->id);
+        $isCreator = $invitation->invited_by == $user->id; // Utiliser == au lieu de === pour éviter les problèmes de type
         
         if (!$isAdmin && !$isCreator) {
-            abort(403, 'Seuls les administrateurs peuvent modifier des invitations.');
+            abort(403, 'Seuls les administrateurs ou le créateur de l\'invitation peuvent modifier des invitations.');
         }
 
         // Seules les invitations en attente peuvent être modifiées
@@ -311,11 +324,12 @@ class InvitationController extends Controller
         }
 
         // Permettre l'accès si l'utilisateur est admin OU s'il a créé l'invitation
-        $isAdmin = $user->hasRoleInCompany('admin', $company->id) || $user->isSuperAdmin();
-        $isCreator = $invitation->invited_by === $user->id;
+        $isSuperAdmin = $user->isSuperAdmin();
+        $isAdmin = $isSuperAdmin || $user->hasRoleInCompany('admin', $company->id);
+        $isCreator = $invitation->invited_by == $user->id; // Utiliser == au lieu de === pour éviter les problèmes de type
         
         if (!$isAdmin && !$isCreator) {
-            abort(403, 'Seuls les administrateurs peuvent modifier des invitations.');
+            abort(403, 'Seuls les administrateurs ou le créateur de l\'invitation peuvent modifier des invitations.');
         }
 
         // Seules les invitations en attente peuvent être modifiées
@@ -369,11 +383,12 @@ class InvitationController extends Controller
         }
 
         // Permettre l'accès si l'utilisateur est admin OU s'il a créé l'invitation
-        $isAdmin = $user->hasRoleInCompany('admin', $company->id) || $user->isSuperAdmin();
-        $isCreator = $invitation->invited_by === $user->id;
+        $isSuperAdmin = $user->isSuperAdmin();
+        $isAdmin = $isSuperAdmin || $user->hasRoleInCompany('admin', $company->id);
+        $isCreator = $invitation->invited_by == $user->id; // Utiliser == au lieu de === pour éviter les problèmes de type
         
         if (!$isAdmin && !$isCreator) {
-            abort(403, 'Seuls les administrateurs peuvent supprimer des invitations.');
+            abort(403, 'Seuls les administrateurs ou le créateur de l\'invitation peuvent supprimer des invitations.');
         }
 
         // Supprimer réellement l'invitation de la base de données
@@ -400,11 +415,12 @@ class InvitationController extends Controller
         }
 
         // Permettre l'accès si l'utilisateur est admin OU s'il a créé l'invitation
-        $isAdmin = $user->hasRoleInCompany('admin', $company->id) || $user->isSuperAdmin();
-        $isCreator = $invitation->invited_by === $user->id;
+        $isSuperAdmin = $user->isSuperAdmin();
+        $isAdmin = $isSuperAdmin || $user->hasRoleInCompany('admin', $company->id);
+        $isCreator = $invitation->invited_by == $user->id; // Utiliser == au lieu de === pour éviter les problèmes de type
         
         if (!$isAdmin && !$isCreator) {
-            abort(403, 'Seuls les administrateurs peuvent renvoyer des invitations.');
+            abort(403, 'Seuls les administrateurs ou le créateur de l\'invitation peuvent renvoyer des invitations.');
         }
 
         if ($invitation->status !== 'pending') {
