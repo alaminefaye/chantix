@@ -149,13 +149,18 @@ class User extends Authenticatable implements MustVerifyEmail
             return false;
         }
         
+        // Vérifier d'abord si l'utilisateur est admin (plus rapide et plus fiable)
+        if ($this->hasRoleInCompany('admin', $companyId)) {
+            return true;
+        }
+        
         $role = $this->roleInCompany($companyId);
         
         if (!$role) {
             return false;
         }
         
-        // Admin a toutes les permissions
+        // Admin a toutes les permissions (double vérification)
         if ($role->name === 'admin') {
             return true;
         }
@@ -243,6 +248,21 @@ class User extends Authenticatable implements MustVerifyEmail
     public function isSuperAdmin()
     {
         return $this->is_super_admin === true;
+    }
+
+    /**
+     * Vérifier si l'utilisateur peut accéder à une ressource d'une entreprise
+     * Le super admin peut toujours accéder
+     */
+    public function canAccessCompanyResource($companyId)
+    {
+        // Super admin peut accéder à tout
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+        
+        // Vérifier que l'utilisateur appartient à l'entreprise
+        return $companyId && $companyId === $this->current_company_id;
     }
 
     /**

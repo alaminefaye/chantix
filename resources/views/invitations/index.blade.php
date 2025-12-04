@@ -100,27 +100,31 @@
                   </td>
                   <td class="border-bottom-0">
                     <div class="d-flex align-items-center gap-2">
-                      <a href="{{ route('invitations.show', ['company' => $company, 'invitation' => $invitation]) }}" class="btn btn-sm btn-info" title="Voir">
-                        <i class="ti ti-eye"></i>
-                      </a>
-                      @if($invitation->status === 'pending' && !$invitation->isExpired())
-                        <a href="{{ route('invitations.edit', ['company' => $company, 'invitation' => $invitation]) }}" class="btn btn-sm btn-warning" title="Modifier">
-                          <i class="ti ti-edit"></i>
+                      @if(auth()->user()->hasRoleInCompany('admin', $company->id))
+                        <a href="{{ route('invitations.show', ['company' => $company, 'invitation' => $invitation]) }}" class="btn btn-sm btn-info" title="Voir">
+                          <i class="ti ti-eye"></i>
                         </a>
-                        <form action="{{ route('invitations.resend', ['company' => $company, 'invitation' => $invitation]) }}" method="POST" class="d-inline">
+                        @if($invitation->status === 'pending' && !$invitation->isExpired())
+                          <a href="{{ route('invitations.edit', ['company' => $company, 'invitation' => $invitation]) }}" class="btn btn-sm btn-warning" title="Modifier">
+                            <i class="ti ti-edit"></i>
+                          </a>
+                          <form action="{{ route('invitations.resend', ['company' => $company, 'invitation' => $invitation]) }}" method="POST" class="d-inline">
+                            @csrf
+                            <button type="submit" class="btn btn-sm btn-info" title="Renvoyer">
+                              <i class="ti ti-refresh"></i>
+                            </button>
+                          </form>
+                        @endif
+                        <form action="{{ route('invitations.destroy', ['company' => $company, 'invitation' => $invitation]) }}" method="POST" onsubmit="return confirm('{{ $invitation->status === 'pending' ? 'Annuler cette invitation ?' : 'Supprimer cette invitation ?' }}');" class="d-inline">
                           @csrf
-                          <button type="submit" class="btn btn-sm btn-info" title="Renvoyer">
-                            <i class="ti ti-refresh"></i>
+                          @method('DELETE')
+                          <button type="submit" class="btn btn-sm btn-danger" title="Supprimer">
+                            <i class="ti ti-trash"></i>
                           </button>
                         </form>
+                      @else
+                        <span class="text-muted">Aucune action disponible</span>
                       @endif
-                      <form action="{{ route('invitations.destroy', ['company' => $company, 'invitation' => $invitation]) }}" method="POST" onsubmit="return confirm('{{ $invitation->status === 'pending' ? 'Annuler cette invitation ?' : 'Supprimer cette invitation ?' }}');" class="d-inline">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" class="btn btn-sm btn-danger" title="Supprimer">
-                          <i class="ti ti-trash"></i>
-                        </button>
-                      </form>
                     </div>
                   </td>
                 </tr>

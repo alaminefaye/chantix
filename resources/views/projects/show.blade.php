@@ -10,7 +10,7 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
           <h5 class="card-title fw-semibold mb-0">{{ $project->name }}</h5>
           <div class="d-flex gap-2">
-            @if(auth()->user()->hasPermission('projects.update'))
+            @if(auth()->user()->hasPermission('projects.update') || auth()->user()->hasRoleInCompany('admin'))
               <a href="{{ route('projects.edit', $project) }}" class="btn btn-warning">
                 <i class="ti ti-edit me-2"></i>Modifier
               </a>
@@ -400,10 +400,12 @@
               </div>
             </div>
           @endif
-          @if(auth()->user()->hasPermission('projects.view'))
+          @if(auth()->user()->hasPermission('projects.view') || auth()->user()->hasRoleInCompany('admin'))
+          @if(auth()->user()->hasPermission('projects.view') || auth()->user()->hasRoleInCompany('admin'))
             <a href="{{ route('projects.gallery', $project) }}" class="btn btn-outline-info">
               <i class="ti ti-photo me-2"></i>Galerie
             </a>
+          @endif
           @endif
           @if(auth()->user()->hasPermission('progress.update') || auth()->user()->hasPermission('progress.view'))
             <a href="{{ route('progress.index', $project) }}" class="btn btn-primary">
