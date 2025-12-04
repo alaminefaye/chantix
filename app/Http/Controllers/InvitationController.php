@@ -128,6 +128,13 @@ class InvitationController extends Controller
             if ($existingUser) {
                 // Vérifier qu'il n'est pas déjà dans l'entreprise
                 if (!$company->users()->where('users.id', $existingUser->id)->exists()) {
+                    // Vérifier automatiquement l'utilisateur s'il ne l'est pas déjà
+                    if (!$existingUser->is_verified) {
+                        $existingUser->is_verified = true;
+                        $existingUser->email_verified_at = now();
+                        $existingUser->save();
+                    }
+                    
                     $company->users()->attach($existingUser->id, [
                         'role_id' => $validated['role_id'],
                         'is_active' => true,
@@ -143,6 +150,8 @@ class InvitationController extends Controller
                     'name' => $validated['name'],
                     'email' => $validated['email'],
                     'password' => Hash::make($validated['password']),
+                    'is_verified' => true, // L'utilisateur créé directement est automatiquement vérifié
+                    'email_verified_at' => now(), // Email vérifié automatiquement
                 ]);
 
                 // Ajouter l'utilisateur à l'entreprise
