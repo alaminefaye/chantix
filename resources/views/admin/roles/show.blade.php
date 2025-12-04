@@ -37,7 +37,7 @@
               </tr>
               <tr>
                 <th>Nombre d'utilisateurs :</th>
-                <td><span class="badge bg-secondary">{{ $role->users()->count() }} utilisateur(s)</span></td>
+                <td><span class="badge bg-secondary">{{ $role->companyUsers()->count() }} utilisateur(s)</span></td>
               </tr>
             </table>
           </div>
@@ -90,7 +90,7 @@
           </div>
         </div>
 
-        @if($role->users()->count() > 0)
+        @if($role->companyUsers()->count() > 0)
           <div class="mt-4">
             <h6 class="fw-semibold mb-3">Utilisateurs avec ce rôle</h6>
             <div class="table-responsive">
@@ -103,7 +103,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  @foreach($role->users()->with('companies')->get() as $user)
+                  @foreach($role->companyUsers()->with('companies')->get() as $user)
                     <tr>
                       <td>{{ $user->name }}</td>
                       <td>{{ $user->email }}</td>

@@ -19,9 +19,10 @@ class Role extends SpatieRole
     ];
 
     /**
-     * Les utilisateurs ayant ce rôle
+     * Les utilisateurs ayant ce rôle dans les entreprises (via company_user)
+     * Note: Spatie a déjà une méthode users() pour les rôles Spatie
      */
-    public function users()
+    public function companyUsers()
     {
         return $this->belongsToMany(User::class, 'company_user')
                     ->withPivot('company_id', 'is_active')

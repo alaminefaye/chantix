@@ -42,7 +42,7 @@
                     @endif
                   </td>
                   <td>
-                    <span class="badge bg-secondary">{{ $role->users()->count() }} utilisateur(s)</span>
+                    <span class="badge bg-secondary">{{ $role->companyUsers()->count() }} utilisateur(s)</span>
                   </td>
                   <td>
                     <div class="d-flex gap-2">
@@ -52,7 +52,7 @@
                       <a href="{{ route('admin.roles.edit', $role) }}" class="btn btn-sm btn-primary" title="Modifier">
                         <i class="ti ti-edit"></i>
                       </a>
-                      @if($role->users()->count() === 0)
+                      @if($role->companyUsers()->count() === 0)
                         <form action="{{ route('admin.roles.destroy', $role) }}" method="POST" class="d-inline" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce rôle ?');">
                           @csrf
                           @method('DELETE')
