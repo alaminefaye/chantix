@@ -226,10 +226,13 @@
                         </div>
                       @endif
                     </div>
-                    <a href="{{ route('companies.index') }}" class="d-flex align-items-center gap-2 dropdown-item">
-                      <i class="ti ti-building-warehouse fs-6"></i>
-                      <p class="mb-0 fs-3">Mes Entreprises</p>
-                    </a>
+                    {{-- Mes Entreprises - Visible uniquement pour Super Admin --}}
+                    @if(auth()->user()->isSuperAdmin())
+                      <a href="{{ route('companies.index') }}" class="d-flex align-items-center gap-2 dropdown-item">
+                        <i class="ti ti-building-warehouse fs-6"></i>
+                        <p class="mb-0 fs-3">Mes Entreprises</p>
+                      </a>
+                    @endif
                     <a href="{{ route('profile.index') }}" class="d-flex align-items-center gap-2 dropdown-item">
                       <i class="ti ti-user fs-6"></i>
                       <p class="mb-0 fs-3">Mon Profil</p>

@@ -94,6 +94,8 @@
           @endif
         </div>
 
+        {{-- Mes Entreprises - Visible uniquement pour Super Admin --}}
+        @if(auth()->user()->isSuperAdmin())
         <div class="mb-4">
           <h6 class="fw-semibold mb-3">Mes Entreprises</h6>
           <div class="table-responsive">
@@ -150,6 +152,7 @@
             </table>
           </div>
         </div>
+        @endif
 
         <div class="alert alert-info">
           <h6 class="fw-semibold mb-2">
