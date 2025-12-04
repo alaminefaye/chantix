@@ -4,11 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Company;
 use App\Models\User;
-use App\Models\Role as OldRole;
+use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
@@ -107,12 +106,9 @@ class UserController extends Controller
             ]);
 
             // Assigner le rôle Spatie
-            $oldRole = OldRole::find($validated['role_id']);
-            if ($oldRole) {
-                $spatieRole = Role::where('name', $oldRole->name)->first();
-                if ($spatieRole) {
-                    $existingUser->assignRole($spatieRole);
-                }
+            $role = Role::find($validated['role_id']);
+            if ($role) {
+                $existingUser->assignRole($role);
             }
 
             return redirect()->route('users.index', $company)
@@ -135,12 +131,9 @@ class UserController extends Controller
         ]);
 
         // Assigner le rôle Spatie
-        $oldRole = OldRole::find($validated['role_id']);
-        if ($oldRole) {
-            $spatieRole = Role::where('name', $oldRole->name)->first();
-            if ($spatieRole) {
-                $newUser->assignRole($spatieRole);
-            }
+        $role = Role::find($validated['role_id']);
+        if ($role) {
+            $newUser->assignRole($role);
         }
 
         // Définir l'entreprise comme actuelle si l'utilisateur n'en a pas
@@ -174,7 +167,7 @@ class UserController extends Controller
         }
 
         $pivot = $company->users()->where('users.id', $user->id)->first()->pivot;
-        $role = OldRole::find($pivot->role_id);
+        $role = Role::find($pivot->role_id);
 
         return view('users.show', compact('company', 'user', 'role', 'pivot'));
     }
@@ -200,8 +193,8 @@ class UserController extends Controller
         }
 
         $pivot = $company->users()->where('users.id', $user->id)->first()->pivot;
-        $currentRole = OldRole::find($pivot->role_id);
-        $roles = OldRole::all();
+        $currentRole = Role::find($pivot->role_id);
+        $roles = Role::all();
 
         return view('users.edit', compact('company', 'user', 'currentRole', 'roles', 'pivot'));
     }
@@ -248,12 +241,9 @@ class UserController extends Controller
         ]);
 
         // Mettre à jour le rôle Spatie
-        $oldRole = OldRole::find($validated['role_id']);
-        if ($oldRole) {
-            $spatieRole = Role::where('name', $oldRole->name)->first();
-            if ($spatieRole) {
-                $user->syncRoles([$spatieRole]);
-            }
+        $role = Role::find($validated['role_id']);
+        if ($role) {
+            $user->syncRoles([$role]);
         }
 
         return redirect()->route('users.index', $company)
