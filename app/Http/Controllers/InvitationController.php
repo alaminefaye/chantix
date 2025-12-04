@@ -246,12 +246,17 @@ class InvitationController extends Controller
             abort(403, 'Accès non autorisé.');
         }
 
-        // Permettre l'accès si l'utilisateur est admin OU s'il a créé l'invitation
+        // PRIORITÉ 1: Si l'utilisateur a créé l'invitation, lui donner l'accès immédiatement
+        if ($invitation->invited_by == $user->id || $invitation->invited_by === $user->id) {
+            $invitation->load('inviter', 'role', 'company');
+            return view('invitations.show', compact('company', 'invitation'));
+        }
+
+        // PRIORITÉ 2: Vérifier si l'utilisateur est admin ou super admin
         $isSuperAdmin = $user->isSuperAdmin();
         $isAdmin = $isSuperAdmin || $user->hasRoleInCompany('admin', $company->id);
-        $isCreator = $invitation->invited_by == $user->id; // Utiliser == au lieu de === pour éviter les problèmes de type
         
-        // Log pour déboguer (à retirer en production)
+        // Log pour déboguer
         \Log::info('Invitation access check', [
             'user_id' => $user->id,
             'user_email' => $user->email,
@@ -259,18 +264,17 @@ class InvitationController extends Controller
             'invited_by' => $invitation->invited_by,
             'isSuperAdmin' => $isSuperAdmin,
             'isAdmin' => $isAdmin,
-            'isCreator' => $isCreator,
+            'isCreator' => ($invitation->invited_by == $user->id),
             'company_id' => $company->id,
             'hasRoleInCompany_result' => $user->hasRoleInCompany('admin', $company->id),
         ]);
         
-        if (!$isAdmin && !$isCreator) {
+        if (!$isAdmin) {
             $errorMsg = sprintf(
-                'Accès refusé. User ID: %d, Invited By: %d, Is Admin: %s, Is Creator: %s, Company ID: %d',
+                'Accès refusé. User ID: %d, Invited By: %d, Is Admin: %s, Company ID: %d',
                 $user->id,
                 $invitation->invited_by ?? 'NULL',
                 $isAdmin ? 'Oui' : 'Non',
-                $isCreator ? 'Oui' : 'Non',
                 $company->id
             );
             \Log::warning('Invitation access denied', [
@@ -278,7 +282,7 @@ class InvitationController extends Controller
                 'invitation_id' => $invitation->id,
                 'error_details' => $errorMsg,
             ]);
-            abort(403, 'Seuls les administrateurs ou le créateur de l\'invitation peuvent voir les détails. ' . $errorMsg);
+            abort(403, 'Seuls les administrateurs ou le créateur de l\'invitation peuvent voir les détails.');
         }
 
         $invitation->load('inviter', 'role', 'company');
@@ -302,13 +306,17 @@ class InvitationController extends Controller
             abort(403, 'Accès non autorisé.');
         }
 
-        // Permettre l'accès si l'utilisateur est admin OU s'il a créé l'invitation
-        $isSuperAdmin = $user->isSuperAdmin();
-        $isAdmin = $isSuperAdmin || $user->hasRoleInCompany('admin', $company->id);
-        $isCreator = $invitation->invited_by == $user->id; // Utiliser == au lieu de === pour éviter les problèmes de type
-        
-        if (!$isAdmin && !$isCreator) {
-            abort(403, 'Seuls les administrateurs ou le créateur de l\'invitation peuvent modifier des invitations.');
+        // PRIORITÉ 1: Si l'utilisateur a créé l'invitation, lui donner l'accès immédiatement
+        if ($invitation->invited_by == $user->id || $invitation->invited_by === $user->id) {
+            // L'utilisateur peut modifier son invitation
+        } else {
+            // PRIORITÉ 2: Vérifier si l'utilisateur est admin ou super admin
+            $isSuperAdmin = $user->isSuperAdmin();
+            $isAdmin = $isSuperAdmin || $user->hasRoleInCompany('admin', $company->id);
+            
+            if (!$isAdmin) {
+                abort(403, 'Seuls les administrateurs ou le créateur de l\'invitation peuvent modifier des invitations.');
+            }
         }
 
         // Seules les invitations en attente peuvent être modifiées
@@ -338,13 +346,17 @@ class InvitationController extends Controller
             abort(403, 'Accès non autorisé.');
         }
 
-        // Permettre l'accès si l'utilisateur est admin OU s'il a créé l'invitation
-        $isSuperAdmin = $user->isSuperAdmin();
-        $isAdmin = $isSuperAdmin || $user->hasRoleInCompany('admin', $company->id);
-        $isCreator = $invitation->invited_by == $user->id; // Utiliser == au lieu de === pour éviter les problèmes de type
-        
-        if (!$isAdmin && !$isCreator) {
-            abort(403, 'Seuls les administrateurs ou le créateur de l\'invitation peuvent modifier des invitations.');
+        // PRIORITÉ 1: Si l'utilisateur a créé l'invitation, lui donner l'accès immédiatement
+        if ($invitation->invited_by == $user->id || $invitation->invited_by === $user->id) {
+            // L'utilisateur peut modifier son invitation
+        } else {
+            // PRIORITÉ 2: Vérifier si l'utilisateur est admin ou super admin
+            $isSuperAdmin = $user->isSuperAdmin();
+            $isAdmin = $isSuperAdmin || $user->hasRoleInCompany('admin', $company->id);
+            
+            if (!$isAdmin) {
+                abort(403, 'Seuls les administrateurs ou le créateur de l\'invitation peuvent modifier des invitations.');
+            }
         }
 
         // Seules les invitations en attente peuvent être modifiées
@@ -397,13 +409,17 @@ class InvitationController extends Controller
             abort(403, 'Accès non autorisé.');
         }
 
-        // Permettre l'accès si l'utilisateur est admin OU s'il a créé l'invitation
-        $isSuperAdmin = $user->isSuperAdmin();
-        $isAdmin = $isSuperAdmin || $user->hasRoleInCompany('admin', $company->id);
-        $isCreator = $invitation->invited_by == $user->id; // Utiliser == au lieu de === pour éviter les problèmes de type
-        
-        if (!$isAdmin && !$isCreator) {
-            abort(403, 'Seuls les administrateurs ou le créateur de l\'invitation peuvent supprimer des invitations.');
+        // PRIORITÉ 1: Si l'utilisateur a créé l'invitation, lui donner l'accès immédiatement
+        if ($invitation->invited_by == $user->id || $invitation->invited_by === $user->id) {
+            // L'utilisateur peut supprimer son invitation
+        } else {
+            // PRIORITÉ 2: Vérifier si l'utilisateur est admin ou super admin
+            $isSuperAdmin = $user->isSuperAdmin();
+            $isAdmin = $isSuperAdmin || $user->hasRoleInCompany('admin', $company->id);
+            
+            if (!$isAdmin) {
+                abort(403, 'Seuls les administrateurs ou le créateur de l\'invitation peuvent supprimer des invitations.');
+            }
         }
 
         // Supprimer réellement l'invitation de la base de données
@@ -429,13 +445,17 @@ class InvitationController extends Controller
             abort(403, 'Accès non autorisé.');
         }
 
-        // Permettre l'accès si l'utilisateur est admin OU s'il a créé l'invitation
-        $isSuperAdmin = $user->isSuperAdmin();
-        $isAdmin = $isSuperAdmin || $user->hasRoleInCompany('admin', $company->id);
-        $isCreator = $invitation->invited_by == $user->id; // Utiliser == au lieu de === pour éviter les problèmes de type
-        
-        if (!$isAdmin && !$isCreator) {
-            abort(403, 'Seuls les administrateurs ou le créateur de l\'invitation peuvent renvoyer des invitations.');
+        // PRIORITÉ 1: Si l'utilisateur a créé l'invitation, lui donner l'accès immédiatement
+        if ($invitation->invited_by == $user->id || $invitation->invited_by === $user->id) {
+            // L'utilisateur peut renvoyer son invitation
+        } else {
+            // PRIORITÉ 2: Vérifier si l'utilisateur est admin ou super admin
+            $isSuperAdmin = $user->isSuperAdmin();
+            $isAdmin = $isSuperAdmin || $user->hasRoleInCompany('admin', $company->id);
+            
+            if (!$isAdmin) {
+                abort(403, 'Seuls les administrateurs ou le créateur de l\'invitation peuvent renvoyer des invitations.');
+            }
         }
 
         if ($invitation->status !== 'pending') {

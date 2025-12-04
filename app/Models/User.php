@@ -129,6 +129,10 @@ class User extends Authenticatable implements MustVerifyEmail
         $companyId = $companyId ?? $this->current_company_id;
         
         if (!$companyId) {
+            \Log::warning('hasRoleInCompany: companyId is null', [
+                'user_id' => $this->id,
+                'role_name' => $roleName,
+            ]);
             return false;
         }
         
@@ -142,11 +146,27 @@ class User extends Authenticatable implements MustVerifyEmail
             ->first();
         
         if (!$role) {
+            \Log::warning('hasRoleInCompany: role not found', [
+                'user_id' => $this->id,
+                'company_id' => $companyId,
+                'role_name' => $roleName,
+            ]);
             return false;
         }
         
         // Vérifier le nom du rôle (insensible à la casse pour plus de robustesse)
-        return strtolower($role->name) === strtolower($roleName);
+        $hasRole = strtolower($role->name) === strtolower($roleName);
+        
+        if (!$hasRole) {
+            \Log::info('hasRoleInCompany: role mismatch', [
+                'user_id' => $this->id,
+                'company_id' => $companyId,
+                'requested_role' => $roleName,
+                'actual_role' => $role->name,
+            ]);
+        }
+        
+        return $hasRole;
     }
 
     /**
