@@ -14,13 +14,35 @@ class RolePermissionSeeder extends Seeder
      */
     public function run(): void
     {
-        // Créer les rôles Spatie
-        $adminRole = Role::firstOrCreate(['name' => 'admin']);
-        $chefChantierRole = Role::firstOrCreate(['name' => 'chef_chantier']);
-        $ingenieurRole = Role::firstOrCreate(['name' => 'ingenieur']);
-        $ouvrierRole = Role::firstOrCreate(['name' => 'ouvrier']);
-        $comptableRole = Role::firstOrCreate(['name' => 'comptable']);
-        $superviseurRole = Role::firstOrCreate(['name' => 'superviseur']);
+        // S'assurer que toutes les permissions ont le guard 'web'
+        Permission::whereNull('guard_name')->orWhere('guard_name', '')->update(['guard_name' => 'web']);
+        
+        // Créer le rôle super_admin avec toutes les permissions
+        $superAdminRole = Role::firstOrCreate(
+            ['name' => 'super_admin', 'guard_name' => 'web']
+        );
+        // Le super admin a toutes les permissions
+        $superAdminRole->givePermissionTo(Permission::where('guard_name', 'web')->get());
+        
+        // Créer les rôles Spatie avec le guard 'web'
+        $adminRole = Role::firstOrCreate(
+            ['name' => 'admin', 'guard_name' => 'web']
+        );
+        $chefChantierRole = Role::firstOrCreate(
+            ['name' => 'chef_chantier', 'guard_name' => 'web']
+        );
+        $ingenieurRole = Role::firstOrCreate(
+            ['name' => 'ingenieur', 'guard_name' => 'web']
+        );
+        $ouvrierRole = Role::firstOrCreate(
+            ['name' => 'ouvrier', 'guard_name' => 'web']
+        );
+        $comptableRole = Role::firstOrCreate(
+            ['name' => 'comptable', 'guard_name' => 'web']
+        );
+        $superviseurRole = Role::firstOrCreate(
+            ['name' => 'superviseur', 'guard_name' => 'web']
+        );
 
         // Créer aussi les rôles dans l'ancienne table pour la compatibilité
         OldRole::firstOrCreate(['name' => 'admin'], [
@@ -48,8 +70,8 @@ class RolePermissionSeeder extends Seeder
             'description' => 'Vue d\'ensemble, rapports, validation',
         ]);
 
-        // Admin : toutes les permissions
-        $adminRole->givePermissionTo(Permission::all());
+        // Admin : toutes les permissions (avec le guard 'web')
+        $adminRole->givePermissionTo(Permission::where('guard_name', 'web')->get());
 
         // Chef de Chantier
         $chefChantierRole->givePermissionTo([

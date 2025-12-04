@@ -272,4 +272,18 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->is_verified === true || $this->isSuperAdmin();
     }
+
+    /**
+     * Surcharger la méthode can() pour que le super admin ait toujours accès
+     */
+    public function can($permission, $guardName = null)
+    {
+        // Super admin a toutes les permissions
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        // Utiliser la méthode can() de Spatie Permissions
+        return parent::can($permission, $guardName);
+    }
 }

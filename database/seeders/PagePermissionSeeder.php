@@ -106,7 +106,9 @@ class PagePermissionSeeder extends Seeder
         ];
 
         foreach ($pages as $page) {
-            Permission::firstOrCreate(['name' => $page]);
+            Permission::firstOrCreate(
+                ['name' => $page, 'guard_name' => 'web']
+            );
         }
     }
 }
