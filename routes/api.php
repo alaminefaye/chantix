@@ -54,5 +54,46 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     
     // Matériaux
     Route::apiResource('materials', \App\Http\Controllers\Api\MaterialController::class);
+    
+    // Employés
+    Route::apiResource('employees', \App\Http\Controllers\Api\EmployeeController::class);
+    
+    // Dépenses
+    Route::get('/expenses', [\App\Http\Controllers\Api\ExpenseController::class, 'index']);
+    Route::get('/expenses/{id}', [\App\Http\Controllers\Api\ExpenseController::class, 'show']);
+    Route::prefix('projects/{project}')->group(function () {
+        Route::get('/expenses', [\App\Http\Controllers\Api\ExpenseController::class, 'index']);
+        Route::post('/expenses', [\App\Http\Controllers\Api\ExpenseController::class, 'store']);
+        Route::get('/expenses/{expense}', [\App\Http\Controllers\Api\ExpenseController::class, 'show']);
+        Route::put('/expenses/{expense}', [\App\Http\Controllers\Api\ExpenseController::class, 'update']);
+        Route::delete('/expenses/{expense}', [\App\Http\Controllers\Api\ExpenseController::class, 'destroy']);
+    });
+    
+    // Tâches
+    Route::get('/tasks', [\App\Http\Controllers\Api\TaskController::class, 'index']);
+    Route::get('/tasks/{id}', [\App\Http\Controllers\Api\TaskController::class, 'show']);
+    Route::prefix('projects/{project}')->group(function () {
+        Route::get('/tasks', [\App\Http\Controllers\Api\TaskController::class, 'index']);
+        Route::post('/tasks', [\App\Http\Controllers\Api\TaskController::class, 'store']);
+        Route::get('/tasks/{task}', [\App\Http\Controllers\Api\TaskController::class, 'show']);
+        Route::put('/tasks/{task}', [\App\Http\Controllers\Api\TaskController::class, 'update']);
+        Route::delete('/tasks/{task}', [\App\Http\Controllers\Api\TaskController::class, 'destroy']);
+    });
+    
+    // Commentaires
+    Route::prefix('projects/{project}')->group(function () {
+        Route::get('/comments', [\App\Http\Controllers\Api\CommentController::class, 'index']);
+        Route::post('/comments', [\App\Http\Controllers\Api\CommentController::class, 'store']);
+        Route::get('/comments/{comment}', [\App\Http\Controllers\Api\CommentController::class, 'show']);
+        Route::delete('/comments/{comment}', [\App\Http\Controllers\Api\CommentController::class, 'destroy']);
+    });
+    
+    // Rapports
+    Route::prefix('projects/{project}')->group(function () {
+        Route::get('/reports', [\App\Http\Controllers\Api\ReportController::class, 'index']);
+        Route::post('/reports/generate', [\App\Http\Controllers\Api\ReportController::class, 'generate']);
+        Route::get('/reports/{report}', [\App\Http\Controllers\Api\ReportController::class, 'show']);
+        Route::delete('/reports/{report}', [\App\Http\Controllers\Api\ReportController::class, 'destroy']);
+    });
 });
 
