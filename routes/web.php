@@ -214,4 +214,44 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/users/{user}/verify', [\App\Http\Controllers\Admin\UserValidationController::class, 'verify'])->name('users.verify');
         Route::post('/users/{user}/reject', [\App\Http\Controllers\Admin\UserValidationController::class, 'reject'])->name('users.reject');
     });
+    
+    // Route de débogage temporaire - À SUPPRIMER EN PRODUCTION
+    Route::get('/debug/permissions/{company?}', function ($companyId = null) {
+        $user = Auth::user();
+        $company = $companyId ? \App\Models\Company::find($companyId) : ($user->currentCompany ?? null);
+        
+        $debug = [
+            'user_id' => $user->id,
+            'user_email' => $user->email,
+            'user_name' => $user->name,
+            'is_super_admin' => $user->isSuperAdmin(),
+            'current_company_id' => $user->current_company_id,
+            'companies' => $user->companies()->get()->map(function ($c) use ($user) {
+                $role = $user->roleInCompany($c->id);
+                return [
+                    'id' => $c->id,
+                    'name' => $c->name,
+                    'role' => $role ? $role->name : 'aucun',
+                    'role_id' => $role ? $role->id : null,
+                    'can_access' => $user->canAccessCompanyResource($c->id),
+                    'is_admin' => $user->hasRoleInCompany('admin', $c->id),
+                ];
+            }),
+        ];
+        
+        if ($company) {
+            $role = $user->roleInCompany($company->id);
+            $debug['selected_company'] = [
+                'id' => $company->id,
+                'name' => $company->name,
+                'role' => $role ? $role->name : 'aucun',
+                'role_id' => $role ? $role->id : null,
+                'can_access' => $user->canAccessCompanyResource($company->id),
+                'is_admin' => $user->hasRoleInCompany('admin', $company->id),
+                'pivot_data' => $user->companies()->where('companies.id', $company->id)->first()?->pivot,
+            ];
+        }
+        
+        return response()->json($debug, 200, [], JSON_PRETTY_PRINT);
+    })->name('debug.permissions');
 });

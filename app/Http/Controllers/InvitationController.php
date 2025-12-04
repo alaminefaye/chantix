@@ -24,12 +24,26 @@ class InvitationController extends Controller
 
         // Super admin peut accéder à toutes les entreprises
         if (!$user->canAccessCompanyResource($company->id)) {
-            abort(403, 'Accès non autorisé.');
+            \Log::warning('Accès refusé - canAccessCompanyResource', [
+                'user_id' => $user->id,
+                'company_id' => $company->id,
+                'current_company_id' => $user->current_company_id,
+                'is_super_admin' => $user->isSuperAdmin(),
+                'user_companies' => $user->companies()->pluck('id')->toArray(),
+            ]);
+            abort(403, 'Accès non autorisé. Vous n\'appartenez pas à cette entreprise.');
         }
 
         // Vérifier que l'utilisateur est admin ou super admin
         if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $company->id)) {
-            abort(403, 'Seuls les administrateurs peuvent gérer les invitations.');
+            $role = $user->roleInCompany($company->id);
+            \Log::warning('Accès refusé - Pas admin', [
+                'user_id' => $user->id,
+                'company_id' => $company->id,
+                'is_super_admin' => $user->isSuperAdmin(),
+                'current_role' => $role ? $role->name : 'aucun',
+            ]);
+            abort(403, 'Seuls les administrateurs peuvent gérer les invitations. Votre rôle: ' . ($role ? $role->name : 'aucun'));
         }
 
         $invitations = $company->invitations()
@@ -245,12 +259,26 @@ class InvitationController extends Controller
 
         // Super admin peut accéder à toutes les entreprises
         if (!$user->canAccessCompanyResource($company->id) || $invitation->company_id !== $company->id) {
-            abort(403, 'Accès non autorisé.');
+            \Log::warning('Accès refusé - canAccessCompanyResource', [
+                'user_id' => $user->id,
+                'company_id' => $company->id,
+                'current_company_id' => $user->current_company_id,
+                'is_super_admin' => $user->isSuperAdmin(),
+                'user_companies' => $user->companies()->pluck('id')->toArray(),
+            ]);
+            abort(403, 'Accès non autorisé. Vous n\'appartenez pas à cette entreprise.');
         }
 
         // Vérifier que l'utilisateur est admin ou super admin
         if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $company->id)) {
-            abort(403, 'Seuls les administrateurs peuvent voir les détails des invitations.');
+            $role = $user->roleInCompany($company->id);
+            \Log::warning('Accès refusé - Pas admin', [
+                'user_id' => $user->id,
+                'company_id' => $company->id,
+                'is_super_admin' => $user->isSuperAdmin(),
+                'current_role' => $role ? $role->name : 'aucun',
+            ]);
+            abort(403, 'Seuls les administrateurs peuvent voir les détails des invitations. Votre rôle: ' . ($role ? $role->name : 'aucun'));
         }
 
         $invitation->load('inviter', 'role', 'company');
@@ -268,12 +296,26 @@ class InvitationController extends Controller
 
         // Super admin peut accéder à toutes les entreprises
         if (!$user->canAccessCompanyResource($company->id) || $invitation->company_id !== $company->id) {
-            abort(403, 'Accès non autorisé.');
+            \Log::warning('Accès refusé - canAccessCompanyResource', [
+                'user_id' => $user->id,
+                'company_id' => $company->id,
+                'current_company_id' => $user->current_company_id,
+                'is_super_admin' => $user->isSuperAdmin(),
+                'user_companies' => $user->companies()->pluck('id')->toArray(),
+            ]);
+            abort(403, 'Accès non autorisé. Vous n\'appartenez pas à cette entreprise.');
         }
 
         // Vérifier que l'utilisateur est admin ou super admin
         if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $company->id)) {
-            abort(403, 'Seuls les administrateurs peuvent modifier des invitations.');
+            $role = $user->roleInCompany($company->id);
+            \Log::warning('Accès refusé - Pas admin', [
+                'user_id' => $user->id,
+                'company_id' => $company->id,
+                'is_super_admin' => $user->isSuperAdmin(),
+                'current_role' => $role ? $role->name : 'aucun',
+            ]);
+            abort(403, 'Seuls les administrateurs peuvent modifier des invitations. Votre rôle: ' . ($role ? $role->name : 'aucun'));
         }
 
         // Seules les invitations en attente peuvent être modifiées
