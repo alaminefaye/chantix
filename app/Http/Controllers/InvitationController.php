@@ -254,16 +254,31 @@ class InvitationController extends Controller
         // Log pour déboguer (à retirer en production)
         \Log::info('Invitation access check', [
             'user_id' => $user->id,
+            'user_email' => $user->email,
             'invitation_id' => $invitation->id,
             'invited_by' => $invitation->invited_by,
             'isSuperAdmin' => $isSuperAdmin,
             'isAdmin' => $isAdmin,
             'isCreator' => $isCreator,
             'company_id' => $company->id,
+            'hasRoleInCompany_result' => $user->hasRoleInCompany('admin', $company->id),
         ]);
         
         if (!$isAdmin && !$isCreator) {
-            abort(403, 'Seuls les administrateurs ou le créateur de l\'invitation peuvent voir les détails.');
+            $errorMsg = sprintf(
+                'Accès refusé. User ID: %d, Invited By: %d, Is Admin: %s, Is Creator: %s, Company ID: %d',
+                $user->id,
+                $invitation->invited_by ?? 'NULL',
+                $isAdmin ? 'Oui' : 'Non',
+                $isCreator ? 'Oui' : 'Non',
+                $company->id
+            );
+            \Log::warning('Invitation access denied', [
+                'user_id' => $user->id,
+                'invitation_id' => $invitation->id,
+                'error_details' => $errorMsg,
+            ]);
+            abort(403, 'Seuls les administrateurs ou le créateur de l\'invitation peuvent voir les détails. ' . $errorMsg);
         }
 
         $invitation->load('inviter', 'role', 'company');
