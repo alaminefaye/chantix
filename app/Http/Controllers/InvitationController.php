@@ -237,17 +237,42 @@ class InvitationController extends Controller
     {
         $user = Auth::user();
         
+        // Log au début pour vérifier que la méthode est appelée
+        \Log::info('=== SHOW INVITATION CALLED ===', [
+            'user_id' => $user->id,
+            'user_email' => $user->email,
+            'invitation_id' => $invitation->id,
+            'invitation_invited_by' => $invitation->invited_by,
+            'company_id' => $company->id,
+        ]);
+        
         // Vérifier que l'utilisateur appartient à cette entreprise
         if (!$user->companies()->where('companies.id', $company->id)->exists()) {
+            \Log::warning('Show: User does not belong to company', [
+                'user_id' => $user->id,
+                'company_id' => $company->id,
+            ]);
             abort(403, 'Accès non autorisé. Vous n\'appartenez pas à cette entreprise.');
         }
         
         if ($invitation->company_id !== $company->id) {
+            \Log::warning('Show: Invitation does not belong to company', [
+                'invitation_id' => $invitation->id,
+                'invitation_company_id' => $invitation->company_id,
+                'company_id' => $company->id,
+            ]);
             abort(403, 'Accès non autorisé.');
         }
 
         // PRIORITÉ 1: Si l'utilisateur a créé l'invitation, lui donner l'accès immédiatement
+        \Log::info('Show: Checking if user is creator', [
+            'user_id' => $user->id,
+            'invited_by' => $invitation->invited_by,
+            'comparison' => ($invitation->invited_by == $user->id),
+        ]);
+        
         if ($invitation->invited_by == $user->id || $invitation->invited_by === $user->id) {
+            \Log::info('Show: User is creator, allowing access');
             $invitation->load('inviter', 'role', 'company');
             return view('invitations.show', compact('company', 'invitation'));
         }
@@ -297,17 +322,42 @@ class InvitationController extends Controller
     {
         $user = Auth::user();
         
+        // Log au début pour vérifier que la méthode est appelée
+        \Log::info('=== EDIT INVITATION CALLED ===', [
+            'user_id' => $user->id,
+            'user_email' => $user->email,
+            'invitation_id' => $invitation->id,
+            'invitation_invited_by' => $invitation->invited_by,
+            'company_id' => $company->id,
+        ]);
+        
         // Vérifier que l'utilisateur appartient à cette entreprise
         if (!$user->companies()->where('companies.id', $company->id)->exists()) {
+            \Log::warning('Edit: User does not belong to company', [
+                'user_id' => $user->id,
+                'company_id' => $company->id,
+            ]);
             abort(403, 'Accès non autorisé. Vous n\'appartenez pas à cette entreprise.');
         }
         
         if ($invitation->company_id !== $company->id) {
+            \Log::warning('Edit: Invitation does not belong to company', [
+                'invitation_id' => $invitation->id,
+                'invitation_company_id' => $invitation->company_id,
+                'company_id' => $company->id,
+            ]);
             abort(403, 'Accès non autorisé.');
         }
 
         // PRIORITÉ 1: Si l'utilisateur a créé l'invitation, lui donner l'accès immédiatement
+        \Log::info('Edit: Checking if user is creator', [
+            'user_id' => $user->id,
+            'invited_by' => $invitation->invited_by,
+            'comparison' => ($invitation->invited_by == $user->id),
+        ]);
+        
         if ($invitation->invited_by == $user->id || $invitation->invited_by === $user->id) {
+            \Log::info('Edit: User is creator, allowing access');
             // L'utilisateur peut modifier son invitation
         } else {
             // PRIORITÉ 2: Vérifier si l'utilisateur est admin ou super admin
