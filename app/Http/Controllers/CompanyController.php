@@ -80,11 +80,9 @@ class CompanyController extends Controller
         $user = Auth::user();
         
         // Le super admin peut accéder à toutes les entreprises
-        if (!$user->isSuperAdmin()) {
-            // Vérifier que l'utilisateur appartient à cette entreprise
-            if (!$user->companies()->where('companies.id', $company->id)->exists()) {
-                return back()->withErrors(['error' => 'Vous n\'appartenez pas à cette entreprise.']);
-            }
+        // Sinon, vérifier que l'utilisateur appartient à cette entreprise
+        if (!$user->canAccessCompanyResource($company->id)) {
+            return back()->withErrors(['error' => 'Vous n\'appartenez pas à cette entreprise.']);
         }
 
         $user->current_company_id = $company->id;
@@ -100,9 +98,10 @@ class CompanyController extends Controller
     {
         $user = Auth::user();
         
-        // Seul le super admin peut voir les détails des entreprises
-        if (!$user->isSuperAdmin()) {
-            abort(403, 'Accès réservé au super administrateur.');
+        // Super admin peut accéder à toutes les entreprises
+        // Sinon, vérifier que l'utilisateur appartient à cette entreprise
+        if (!$user->canAccessCompanyResource($company->id)) {
+            abort(403, 'Accès non autorisé. Vous n\'appartenez pas à cette entreprise.');
         }
 
         return view('companies.show', compact('company'));
@@ -115,9 +114,15 @@ class CompanyController extends Controller
     {
         $user = Auth::user();
         
-        // Seul le super admin peut modifier les entreprises
-        if (!$user->isSuperAdmin()) {
-            abort(403, 'Accès réservé au super administrateur.');
+        // Super admin peut modifier toutes les entreprises
+        // Sinon, vérifier que l'utilisateur est admin de cette entreprise
+        if (!$user->canAccessCompanyResource($company->id)) {
+            abort(403, 'Accès non autorisé. Vous n\'appartenez pas à cette entreprise.');
+        }
+        
+        // Vérifier que l'utilisateur est admin ou super admin
+        if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $company->id)) {
+            abort(403, 'Seuls les administrateurs peuvent modifier les informations de l\'entreprise.');
         }
 
         return view('companies.edit', compact('company'));
@@ -130,9 +135,15 @@ class CompanyController extends Controller
     {
         $user = Auth::user();
         
-        // Seul le super admin peut modifier les entreprises
-        if (!$user->isSuperAdmin()) {
-            abort(403, 'Accès réservé au super administrateur.');
+        // Super admin peut modifier toutes les entreprises
+        // Sinon, vérifier que l'utilisateur est admin de cette entreprise
+        if (!$user->canAccessCompanyResource($company->id)) {
+            abort(403, 'Accès non autorisé. Vous n\'appartenez pas à cette entreprise.');
+        }
+        
+        // Vérifier que l'utilisateur est admin ou super admin
+        if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $company->id)) {
+            abort(403, 'Seuls les administrateurs peuvent modifier les informations de l\'entreprise.');
         }
 
         $validated = $request->validate([
