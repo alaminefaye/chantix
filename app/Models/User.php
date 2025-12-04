@@ -261,8 +261,13 @@ class User extends Authenticatable implements MustVerifyEmail
             return false;
         }
         
+        // Convertir en entier pour éviter les problèmes de type
+        $companyId = (int) $companyId;
+        
         // Vérifier si l'utilisateur appartient réellement à cette entreprise
-        return $this->companies()->where('companies.id', $companyId)->exists();
+        // Utiliser get() puis vérifier dans la collection pour éviter les problèmes SQL
+        $userCompanyIds = $this->companies()->get()->pluck('id')->toArray();
+        return in_array($companyId, $userCompanyIds);
     }
 
     /**
