@@ -10,13 +10,15 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
           <h5 class="card-title fw-semibold mb-0">Mes Projets</h5>
           <div class="d-flex gap-2">
-            <a href="{{ route('projects.index', array_merge(request()->all(), ['view' => 'list'])) }}" class="btn btn-sm btn-outline-primary {{ ($view ?? 'list') === 'list' ? 'active' : '' }}">
-              <i class="ti ti-list me-1"></i>Liste
-            </a>
-            <a href="{{ route('projects.index', array_merge(request()->all(), ['view' => 'map'])) }}" class="btn btn-sm btn-outline-primary {{ ($view ?? 'list') === 'map' ? 'active' : '' }}">
-              <i class="ti ti-map me-1"></i>Carte
-            </a>
-            @if(auth()->user()->hasPermission('projects.create') || auth()->user()->hasRoleInCompany('admin'))
+            @if(auth()->user()->hasPermission('projects.view'))
+              <a href="{{ route('projects.index', array_merge(request()->all(), ['view' => 'list'])) }}" class="btn btn-sm btn-outline-primary {{ ($view ?? 'list') === 'list' ? 'active' : '' }}">
+                <i class="ti ti-list me-1"></i>Liste
+              </a>
+              <a href="{{ route('projects.index', array_merge(request()->all(), ['view' => 'map'])) }}" class="btn btn-sm btn-outline-primary {{ ($view ?? 'list') === 'map' ? 'active' : '' }}">
+                <i class="ti ti-map me-1"></i>Carte
+              </a>
+            @endif
+            @if(auth()->user()->hasPermission('projects.create'))
               <a href="{{ route('projects.create') }}" class="btn btn-primary">
                 <i class="ti ti-plus me-2"></i>Créer un projet
               </a>
@@ -118,7 +120,7 @@
                 <div class="alert alert-info">
                   <i class="ti ti-info-circle me-2"></i>
                   Aucun projet avec coordonnées GPS trouvé.
-                  @if(auth()->user()->hasPermission('projects.create') || auth()->user()->hasRoleInCompany('admin'))
+                  @if(auth()->user()->hasPermission('projects.create'))
                     <a href="{{ route('projects.create') }}">Créer un projet</a>
                   @endif
                 </div>
@@ -200,8 +202,10 @@
                   </td>
                   <td class="border-bottom-0">
                     <div class="d-flex align-items-center gap-2">
-                      <a href="{{ route('projects.show', $project) }}" class="btn btn-sm btn-info">Voir</a>
-                      @if(auth()->user()->canManageProject($project, 'edit') || auth()->user()->hasRoleInCompany('admin'))
+                      @if(auth()->user()->hasPermission('projects.view'))
+                        <a href="{{ route('projects.show', $project) }}" class="btn btn-sm btn-info">Voir</a>
+                      @endif
+                      @if(auth()->user()->hasPermission('projects.update'))
                         <a href="{{ route('projects.edit', $project) }}" class="btn btn-sm btn-warning">Modifier</a>
                       @endif
                     </div>
@@ -211,7 +215,7 @@
                 <tr>
                   <td colspan="6" class="text-center py-4">
                     <p class="mb-0">Aucun projet trouvé.
-                      @if(auth()->user()->hasPermission('projects.create') || auth()->user()->hasRoleInCompany('admin'))
+                      @if(auth()->user()->hasPermission('projects.create'))
                         <a href="{{ route('projects.create') }}">Créer un projet</a>
                       @endif
                     </p>
@@ -275,7 +279,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     <p class="mb-1"><strong>Statut:</strong> <span class="badge bg-${statusColors[project.status] || 'secondary'}">${statusLabels[project.status] || project.status}</span></p>
                     <p class="mb-1"><strong>Avancement:</strong> ${project.progress}%</p>
                     ${project.address ? `<p class="mb-1"><strong>Adresse:</strong> ${project.address}</p>` : ''}
-                    <a href="/projects/${project.id}" class="btn btn-sm btn-primary mt-2">Voir le projet</a>
+                    @if(auth()->user()->hasPermission('projects.view'))
+                      <a href="/projects/${project.id}" class="btn btn-sm btn-primary mt-2">Voir le projet</a>
+                    @endif
                 </div>
             `);
         }

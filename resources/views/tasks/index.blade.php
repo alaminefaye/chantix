@@ -12,11 +12,9 @@
           <div class="d-flex gap-2">
             <a href="{{ route('tasks.index', ['project' => $project, 'view' => 'calendar']) }}" class="btn btn-sm btn-outline-primary">Calendrier</a>
             <a href="{{ route('tasks.index', ['project' => $project, 'view' => 'kanban']) }}" class="btn btn-sm btn-outline-primary">Kanban</a>
-            @if(auth()->user()->canManageProject($project, 'edit') || auth()->user()->hasRoleInCompany('admin'))
-              <a href="{{ route('tasks.create', $project) }}" class="btn btn-primary">
-                <i class="ti ti-plus me-2"></i>Nouvelle tâche
-              </a>
-            @endif
+            <a href="{{ route('tasks.create', $project) }}" class="btn btn-primary">
+              <i class="ti ti-plus me-2"></i>Nouvelle tâche
+            </a>
             <a href="{{ route('projects.show', $project) }}" class="btn btn-secondary">Retour</a>
           </div>
         </div>
@@ -194,20 +192,14 @@
                   <td class="border-bottom-0">
                     <div class="d-flex align-items-center gap-2">
                       <a href="{{ route('tasks.show', ['project' => $project, 'task' => $task]) }}" class="btn btn-sm btn-info">Voir</a>
-                      @if(auth()->user()->canManageProject($project, 'edit') || auth()->user()->hasRoleInCompany('admin') || $task->created_by == auth()->id())
-                        <a href="{{ route('tasks.edit', ['project' => $project, 'task' => $task]) }}" class="btn btn-sm btn-warning">Modifier</a>
-                      @endif
+                      <a href="{{ route('tasks.edit', ['project' => $project, 'task' => $task]) }}" class="btn btn-sm btn-warning">Modifier</a>
                     </div>
                   </td>
                 </tr>
               @empty
                 <tr>
                   <td colspan="8" class="text-center py-4">
-                    <p class="mb-0">Aucune tâche trouvée.
-                      @if(auth()->user()->canManageProject($project, 'edit') || auth()->user()->hasRoleInCompany('admin'))
-                        <a href="{{ route('tasks.create', $project) }}">Créer une tâche</a>
-                      @endif
-                    </p>
+                    <p class="mb-0">Aucune tâche trouvée. <a href="{{ route('tasks.create', $project) }}">Créer une tâche</a></p>
                   </td>
                 </tr>
               @endforelse

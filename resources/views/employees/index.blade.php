@@ -106,14 +106,18 @@
                   </td>
                   <td class="border-bottom-0">
                     <div class="d-flex align-items-center gap-2">
-                      <a href="{{ route('employees.show', $employee) }}" class="btn btn-sm btn-info">Voir</a>
                       @if(auth()->user()->hasPermission('projects.manage_team') || auth()->user()->hasRoleInCompany('admin'))
+                        <a href="{{ route('employees.show', $employee) }}" class="btn btn-sm btn-info">Voir</a>
                         <a href="{{ route('employees.edit', $employee) }}" class="btn btn-sm btn-warning">Modifier</a>
-                        <form action="{{ route('employees.destroy', $employee) }}" method="POST" class="d-inline" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cet employé ? Cette action est irréversible.');">
-                          @csrf
-                          @method('DELETE')
-                          <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
-                        </form>
+                        @if(auth()->user()->hasRoleInCompany('admin'))
+                          <form action="{{ route('employees.destroy', $employee) }}" method="POST" class="d-inline" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cet employé ? Cette action est irréversible.');">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
+                          </form>
+                        @endif
+                      @else
+                        <span class="text-muted">Aucune action disponible</span>
                       @endif
                     </div>
                   </td>

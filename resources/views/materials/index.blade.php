@@ -118,9 +118,11 @@
                   </td>
                   <td class="border-bottom-0">
                     <div class="d-flex align-items-center gap-2">
-                      <a href="{{ route('materials.show', $material) }}" class="btn btn-sm btn-info">Voir</a>
                       @if(auth()->user()->hasPermission('materials.manage') || auth()->user()->hasRoleInCompany('admin'))
+                        <a href="{{ route('materials.show', $material) }}" class="btn btn-sm btn-info">Voir</a>
                         <a href="{{ route('materials.edit', $material) }}" class="btn btn-sm btn-warning">Modifier</a>
+                      @else
+                        <span class="text-muted">Aucune action disponible</span>
                       @endif
                     </div>
                   </td>

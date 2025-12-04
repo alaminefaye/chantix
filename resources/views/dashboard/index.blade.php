@@ -342,19 +342,12 @@
                   </td>
                   <td class="border-bottom-0">
                     <a href="{{ route('projects.show', $project) }}" class="btn btn-sm btn-info">Voir</a>
-                    @if(auth()->user()->canManageProject($project, 'edit') || auth()->user()->hasRoleInCompany('admin'))
-                      <a href="{{ route('projects.edit', $project) }}" class="btn btn-sm btn-warning ms-1">Modifier</a>
-                    @endif
                   </td>
                 </tr>
               @empty
                 <tr>
                   <td colspan="5" class="text-center py-4">
-                    <p class="mb-0">Aucun projet trouvé.
-                      @if(auth()->user()->hasPermission('projects.create') || auth()->user()->hasRoleInCompany('admin'))
-                        <a href="{{ route('projects.create') }}">Créer un projet</a>
-                      @endif
-                    </p>
+                    <p class="mb-0">Aucun projet trouvé. <a href="{{ route('projects.create') }}">Créer un projet</a></p>
                   </td>
                 </tr>
               @endforelse
