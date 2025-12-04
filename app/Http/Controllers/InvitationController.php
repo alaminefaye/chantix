@@ -20,14 +20,14 @@ class InvitationController extends Controller
     public function index(Company $company)
     {
         $user = Auth::user();
-        $companyId = $user->current_company_id;
-
-        if ($company->id !== $companyId) {
-            abort(403, 'Accès non autorisé.');
+        
+        // Vérifier que l'utilisateur appartient à cette entreprise
+        if (!$user->companies()->where('companies.id', $company->id)->exists()) {
+            abort(403, 'Accès non autorisé. Vous n\'appartenez pas à cette entreprise.');
         }
 
-        // Vérifier que l'utilisateur est admin
-        if (!$user->hasRoleInCompany('admin', $companyId)) {
+        // Vérifier que l'utilisateur est admin dans cette entreprise
+        if (!$user->hasRoleInCompany('admin', $company->id)) {
             abort(403, 'Seuls les administrateurs peuvent gérer les invitations.');
         }
 
@@ -45,13 +45,13 @@ class InvitationController extends Controller
     public function create(Company $company)
     {
         $user = Auth::user();
-        $companyId = $user->current_company_id;
-
-        if ($company->id !== $companyId) {
-            abort(403, 'Accès non autorisé.');
+        
+        // Vérifier que l'utilisateur appartient à cette entreprise
+        if (!$user->companies()->where('companies.id', $company->id)->exists()) {
+            abort(403, 'Accès non autorisé. Vous n\'appartenez pas à cette entreprise.');
         }
 
-        if (!$user->hasRoleInCompany('admin', $companyId)) {
+        if (!$user->hasRoleInCompany('admin', $company->id)) {
             abort(403, 'Seuls les administrateurs peuvent inviter des utilisateurs.');
         }
 
@@ -66,13 +66,13 @@ class InvitationController extends Controller
     public function store(Request $request, Company $company)
     {
         $user = Auth::user();
-        $companyId = $user->current_company_id;
-
-        if ($company->id !== $companyId) {
-            abort(403, 'Accès non autorisé.');
+        
+        // Vérifier que l'utilisateur appartient à cette entreprise
+        if (!$user->companies()->where('companies.id', $company->id)->exists()) {
+            abort(403, 'Accès non autorisé. Vous n\'appartenez pas à cette entreprise.');
         }
 
-        if (!$user->hasRoleInCompany('admin', $companyId)) {
+        if (!$user->hasRoleInCompany('admin', $company->id)) {
             abort(403, 'Seuls les administrateurs peuvent inviter des utilisateurs.');
         }
 
@@ -236,13 +236,17 @@ class InvitationController extends Controller
     public function show(Company $company, Invitation $invitation)
     {
         $user = Auth::user();
-        $companyId = $user->current_company_id;
-
-        if ($company->id !== $companyId || $invitation->company_id !== $company->id) {
+        
+        // Vérifier que l'utilisateur appartient à cette entreprise
+        if (!$user->companies()->where('companies.id', $company->id)->exists()) {
+            abort(403, 'Accès non autorisé. Vous n\'appartenez pas à cette entreprise.');
+        }
+        
+        if ($invitation->company_id !== $company->id) {
             abort(403, 'Accès non autorisé.');
         }
 
-        if (!$user->hasRoleInCompany('admin', $companyId)) {
+        if (!$user->hasRoleInCompany('admin', $company->id)) {
             abort(403, 'Seuls les administrateurs peuvent voir les détails des invitations.');
         }
 
@@ -257,13 +261,17 @@ class InvitationController extends Controller
     public function edit(Company $company, Invitation $invitation)
     {
         $user = Auth::user();
-        $companyId = $user->current_company_id;
-
-        if ($company->id !== $companyId || $invitation->company_id !== $company->id) {
+        
+        // Vérifier que l'utilisateur appartient à cette entreprise
+        if (!$user->companies()->where('companies.id', $company->id)->exists()) {
+            abort(403, 'Accès non autorisé. Vous n\'appartenez pas à cette entreprise.');
+        }
+        
+        if ($invitation->company_id !== $company->id) {
             abort(403, 'Accès non autorisé.');
         }
 
-        if (!$user->hasRoleInCompany('admin', $companyId)) {
+        if (!$user->hasRoleInCompany('admin', $company->id)) {
             abort(403, 'Seuls les administrateurs peuvent modifier des invitations.');
         }
 
@@ -284,13 +292,17 @@ class InvitationController extends Controller
     public function update(Request $request, Company $company, Invitation $invitation)
     {
         $user = Auth::user();
-        $companyId = $user->current_company_id;
-
-        if ($company->id !== $companyId || $invitation->company_id !== $company->id) {
+        
+        // Vérifier que l'utilisateur appartient à cette entreprise
+        if (!$user->companies()->where('companies.id', $company->id)->exists()) {
+            abort(403, 'Accès non autorisé. Vous n\'appartenez pas à cette entreprise.');
+        }
+        
+        if ($invitation->company_id !== $company->id) {
             abort(403, 'Accès non autorisé.');
         }
 
-        if (!$user->hasRoleInCompany('admin', $companyId)) {
+        if (!$user->hasRoleInCompany('admin', $company->id)) {
             abort(403, 'Seuls les administrateurs peuvent modifier des invitations.');
         }
 
@@ -334,13 +346,17 @@ class InvitationController extends Controller
     public function destroy(Company $company, Invitation $invitation)
     {
         $user = Auth::user();
-        $companyId = $user->current_company_id;
-
-        if ($company->id !== $companyId || $invitation->company_id !== $company->id) {
+        
+        // Vérifier que l'utilisateur appartient à cette entreprise
+        if (!$user->companies()->where('companies.id', $company->id)->exists()) {
+            abort(403, 'Accès non autorisé. Vous n\'appartenez pas à cette entreprise.');
+        }
+        
+        if ($invitation->company_id !== $company->id) {
             abort(403, 'Accès non autorisé.');
         }
 
-        if (!$user->hasRoleInCompany('admin', $companyId)) {
+        if (!$user->hasRoleInCompany('admin', $company->id)) {
             abort(403, 'Seuls les administrateurs peuvent supprimer des invitations.');
         }
 
@@ -357,13 +373,17 @@ class InvitationController extends Controller
     public function resend(Company $company, Invitation $invitation)
     {
         $user = Auth::user();
-        $companyId = $user->current_company_id;
-
-        if ($company->id !== $companyId || $invitation->company_id !== $company->id) {
+        
+        // Vérifier que l'utilisateur appartient à cette entreprise
+        if (!$user->companies()->where('companies.id', $company->id)->exists()) {
+            abort(403, 'Accès non autorisé. Vous n\'appartenez pas à cette entreprise.');
+        }
+        
+        if ($invitation->company_id !== $company->id) {
             abort(403, 'Accès non autorisé.');
         }
 
-        if (!$user->hasRoleInCompany('admin', $companyId)) {
+        if (!$user->hasRoleInCompany('admin', $company->id)) {
             abort(403, 'Seuls les administrateurs peuvent renvoyer des invitations.');
         }
 
