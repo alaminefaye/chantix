@@ -18,14 +18,12 @@
             @endif
           </div>
           <div class="d-flex gap-2">
-            @if(auth()->user()->hasPermission('materials.manage') || auth()->user()->hasRoleInCompany('admin'))
-              <a href="{{ route('materials.import') }}" class="btn btn-info">
-                <i class="ti ti-upload me-2"></i>Importer Excel
-              </a>
-              <a href="{{ route('materials.create') }}" class="btn btn-primary">
-                <i class="ti ti-plus me-2"></i>Ajouter un matériau
-              </a>
-            @endif
+            <a href="{{ route('materials.import') }}" class="btn btn-info">
+              <i class="ti ti-upload me-2"></i>Importer Excel
+            </a>
+            <a href="{{ route('materials.create') }}" class="btn btn-primary">
+              <i class="ti ti-plus me-2"></i>Ajouter un matériau
+            </a>
           </div>
         </div>
 
@@ -118,23 +116,15 @@
                   </td>
                   <td class="border-bottom-0">
                     <div class="d-flex align-items-center gap-2">
-                      @if(auth()->user()->hasPermission('materials.manage') || auth()->user()->hasRoleInCompany('admin'))
-                        <a href="{{ route('materials.show', $material) }}" class="btn btn-sm btn-info">Voir</a>
-                        <a href="{{ route('materials.edit', $material) }}" class="btn btn-sm btn-warning">Modifier</a>
-                      @else
-                        <span class="text-muted">Aucune action disponible</span>
-                      @endif
+                      <a href="{{ route('materials.show', $material) }}" class="btn btn-sm btn-info">Voir</a>
+                      <a href="{{ route('materials.edit', $material) }}" class="btn btn-sm btn-warning">Modifier</a>
                     </div>
                   </td>
                 </tr>
               @empty
                 <tr>
                   <td colspan="7" class="text-center py-4">
-                    <p class="mb-0">Aucun matériau trouvé.
-                      @if(auth()->user()->hasPermission('materials.manage') || auth()->user()->hasRoleInCompany('admin'))
-                        <a href="{{ route('materials.create') }}">Ajouter un matériau</a>
-                      @endif
-                    </p>
+                    <p class="mb-0">Aucun matériau trouvé. <a href="{{ route('materials.create') }}">Ajouter un matériau</a></p>
                   </td>
                 </tr>
               @endforelse

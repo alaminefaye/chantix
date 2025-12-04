@@ -10,11 +10,9 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
           <h5 class="card-title fw-semibold mb-0">{{ $project->name }}</h5>
           <div class="d-flex gap-2">
-            @if(auth()->user()->hasPermission('projects.update') || auth()->user()->hasRoleInCompany('admin'))
-              <a href="{{ route('projects.edit', $project) }}" class="btn btn-warning">
-                <i class="ti ti-edit me-2"></i>Modifier
-              </a>
-            @endif
+            <a href="{{ route('projects.edit', $project) }}" class="btn btn-warning">
+              <i class="ti ti-edit me-2"></i>Modifier
+            </a>
             <a href="{{ route('projects.index') }}" class="btn btn-secondary">Retour</a>
           </div>
         </div>
@@ -230,16 +228,14 @@
                     </td>
                     <td class="border-bottom-0">
                       <div class="d-flex gap-2">
-                        @if(auth()->user()->hasPermission('materials.manage') || auth()->user()->hasRoleInCompany('admin'))
-                          @if($pivot->quantity_remaining > 0)
-                            <a href="{{ route('projects.materials.transfer', ['project' => $project, 'material' => $material]) }}" class="btn btn-sm btn-info" title="Transférer vers un autre projet">
-                              <i class="ti ti-arrow-right"></i>
-                            </a>
-                          @endif
-                          <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#updateMaterialModal{{ $material->id }}">
-                            <i class="ti ti-edit"></i>
-                          </button>
+                        @if($pivot->quantity_remaining > 0)
+                          <a href="{{ route('projects.materials.transfer', ['project' => $project, 'material' => $material]) }}" class="btn btn-sm btn-info" title="Transférer vers un autre projet">
+                            <i class="ti ti-arrow-right"></i>
+                          </a>
                         @endif
+                        <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#updateMaterialModal{{ $material->id }}">
+                          <i class="ti ti-edit"></i>
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -256,16 +252,12 @@
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h6 class="fw-semibold mb-0">Employés affectés</h6>
           <div class="d-flex gap-2">
-            @if(auth()->user()->hasPermission('projects.manage_team') || auth()->user()->hasRoleInCompany('admin'))
-              <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#assignEmployeeModal">
-                <i class="ti ti-plus me-1"></i>Affecter un employé
-              </button>
-            @endif
-            @if(auth()->user()->hasPermission('checkin.create') || auth()->user()->hasRoleInCompany('admin'))
-              <a href="{{ route('attendances.index', $project) }}" class="btn btn-sm btn-info">
-                <i class="ti ti-clock me-1"></i>Pointage
-              </a>
-            @endif
+            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#assignEmployeeModal">
+              <i class="ti ti-plus me-1"></i>Affecter un employé
+            </button>
+            <a href="{{ route('attendances.index', $project) }}" class="btn btn-sm btn-info">
+              <i class="ti ti-clock me-1"></i>Pointage
+            </a>
           </div>
         </div>
 
@@ -340,11 +332,9 @@
         <hr class="my-4">
 
         <div class="d-flex gap-2 flex-wrap">
-          @if(auth()->user()->hasPermission('projects.view'))
-            <a href="{{ route('projects.timeline', $project) }}" class="btn btn-outline-primary">
-              <i class="ti ti-timeline me-2"></i>Timeline
-            </a>
-          @endif
+          <a href="{{ route('projects.timeline', $project) }}" class="btn btn-outline-primary">
+            <i class="ti ti-timeline me-2"></i>Timeline
+          </a>
           
           <!-- Historique des changements de statut -->
           @if($project->statusHistory && $project->statusHistory->count() > 0)
@@ -400,43 +390,27 @@
               </div>
             </div>
           @endif
-          @if(auth()->user()->hasPermission('projects.view') || auth()->user()->hasRoleInCompany('admin'))
-          @if(auth()->user()->hasPermission('projects.view') || auth()->user()->hasRoleInCompany('admin'))
-            <a href="{{ route('projects.gallery', $project) }}" class="btn btn-outline-info">
-              <i class="ti ti-photo me-2"></i>Galerie
-            </a>
-          @endif
-          @endif
-          @if(auth()->user()->hasPermission('progress.update') || auth()->user()->hasPermission('progress.view'))
-            <a href="{{ route('progress.index', $project) }}" class="btn btn-primary">
-              <i class="ti ti-progress me-2"></i>Mises à jour
-            </a>
-          @endif
-          @if(auth()->user()->hasPermission('tasks.view') || auth()->user()->hasPermission('tasks.manage'))
-            <a href="{{ route('tasks.index', $project) }}" class="btn btn-success">
-              <i class="ti ti-checklist me-2"></i>Tâches
-            </a>
-          @endif
-          @if(auth()->user()->hasPermission('expenses.view') || auth()->user()->hasRoleInCompany('admin') || auth()->user()->hasRoleInCompany('comptable'))
-            <a href="{{ route('expenses.index', $project) }}" class="btn btn-info">
-              <i class="ti ti-currency-euro me-2"></i>Dépenses
-            </a>
-          @endif
-          @if(auth()->user()->hasPermission('checkin.create') || auth()->user()->hasRoleInCompany('admin'))
-            <a href="{{ route('attendances.index', $project) }}" class="btn btn-warning">
-              <i class="ti ti-clock me-2"></i>Pointage
-            </a>
-          @endif
-          @if(auth()->user()->hasPermission('reports.view') || auth()->user()->hasPermission('reports.generate'))
-            <a href="{{ route('reports.index', $project) }}" class="btn btn-secondary">
-              <i class="ti ti-file-text me-2"></i>Rapports
-            </a>
-          @endif
-          @if(auth()->user()->hasPermission('projects.view'))
-            <a href="{{ route('comments.index', $project) }}" class="btn btn-dark">
-              <i class="ti ti-message-circle me-2"></i>Chat
-            </a>
-          @endif
+          <a href="{{ route('projects.gallery', $project) }}" class="btn btn-outline-info">
+            <i class="ti ti-photo me-2"></i>Galerie
+          </a>
+          <a href="{{ route('progress.index', $project) }}" class="btn btn-primary">
+            <i class="ti ti-progress me-2"></i>Mises à jour
+          </a>
+          <a href="{{ route('tasks.index', $project) }}" class="btn btn-success">
+            <i class="ti ti-checklist me-2"></i>Tâches
+          </a>
+          <a href="{{ route('expenses.index', $project) }}" class="btn btn-info">
+            <i class="ti ti-currency-euro me-2"></i>Dépenses
+          </a>
+          <a href="{{ route('attendances.index', $project) }}" class="btn btn-warning">
+            <i class="ti ti-clock me-2"></i>Pointage
+          </a>
+          <a href="{{ route('reports.index', $project) }}" class="btn btn-secondary">
+            <i class="ti ti-file-text me-2"></i>Rapports
+          </a>
+          <a href="{{ route('comments.index', $project) }}" class="btn btn-dark">
+            <i class="ti ti-message-circle me-2"></i>Chat
+          </a>
         </div>
       </div>
     </div>

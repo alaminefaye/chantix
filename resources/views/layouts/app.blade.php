@@ -68,7 +68,7 @@
             @endphp
             
             {{-- Projets - Visible pour tous les rôles --}}
-            @if($user->hasPermission('projects.view') || $user->hasRoleInCompany('admin'))
+            @if($user->hasPermission('projects.view'))
               <li class="sidebar-item">
                 <a class="sidebar-link {{ request()->routeIs('projects.*') ? 'active' : '' }}" href="{{ route('projects.index') }}" aria-expanded="false">
                   <span>

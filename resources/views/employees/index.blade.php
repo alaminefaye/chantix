@@ -10,14 +10,12 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
           <h5 class="card-title fw-semibold mb-0">Employés</h5>
           <div class="d-flex gap-2">
-            @if(auth()->user()->hasPermission('projects.manage_team') || auth()->user()->hasRoleInCompany('admin'))
-              <a href="{{ route('employees.import') }}" class="btn btn-info">
-                <i class="ti ti-upload me-2"></i>Importer Excel
-              </a>
-              <a href="{{ route('employees.create') }}" class="btn btn-primary">
-                <i class="ti ti-plus me-2"></i>Ajouter un employé
-              </a>
-            @endif
+            <a href="{{ route('employees.import') }}" class="btn btn-info">
+              <i class="ti ti-upload me-2"></i>Importer Excel
+            </a>
+            <a href="{{ route('employees.create') }}" class="btn btn-primary">
+              <i class="ti ti-plus me-2"></i>Ajouter un employé
+            </a>
           </div>
         </div>
 
@@ -106,30 +104,20 @@
                   </td>
                   <td class="border-bottom-0">
                     <div class="d-flex align-items-center gap-2">
-                      @if(auth()->user()->hasPermission('projects.manage_team') || auth()->user()->hasRoleInCompany('admin'))
-                        <a href="{{ route('employees.show', $employee) }}" class="btn btn-sm btn-info">Voir</a>
-                        <a href="{{ route('employees.edit', $employee) }}" class="btn btn-sm btn-warning">Modifier</a>
-                        @if(auth()->user()->hasRoleInCompany('admin'))
-                          <form action="{{ route('employees.destroy', $employee) }}" method="POST" class="d-inline" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cet employé ? Cette action est irréversible.');">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
-                          </form>
-                        @endif
-                      @else
-                        <span class="text-muted">Aucune action disponible</span>
-                      @endif
+                      <a href="{{ route('employees.show', $employee) }}" class="btn btn-sm btn-info">Voir</a>
+                      <a href="{{ route('employees.edit', $employee) }}" class="btn btn-sm btn-warning">Modifier</a>
+                      <form action="{{ route('employees.destroy', $employee) }}" method="POST" class="d-inline" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cet employé ? Cette action est irréversible.');">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
+                      </form>
                     </div>
                   </td>
                 </tr>
               @empty
                 <tr>
                   <td colspan="7" class="text-center py-4">
-                    <p class="mb-0">Aucun employé trouvé.
-                      @if(auth()->user()->hasPermission('projects.manage_team') || auth()->user()->hasRoleInCompany('admin'))
-                        <a href="{{ route('employees.create') }}">Ajouter un employé</a>
-                      @endif
-                    </p>
+                    <p class="mb-0">Aucun employé trouvé. <a href="{{ route('employees.create') }}">Ajouter un employé</a></p>
                   </td>
                 </tr>
               @endforelse

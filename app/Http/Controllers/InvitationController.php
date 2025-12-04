@@ -20,14 +20,14 @@ class InvitationController extends Controller
     public function index(Company $company)
     {
         $user = Auth::user();
-        
-        // Vérifier que l'utilisateur appartient à cette entreprise
-        if (!$user->companies()->where('companies.id', $company->id)->exists()) {
-            abort(403, 'Accès non autorisé. Vous n\'appartenez pas à cette entreprise.');
+        $companyId = $user->current_company_id;
+
+        if ($company->id !== $companyId) {
+            abort(403, 'Accès non autorisé.');
         }
 
-        // Vérifier que l'utilisateur est admin dans cette entreprise
-        if (!$user->hasRoleInCompany('admin', $company->id)) {
+        // Vérifier que l'utilisateur est admin
+        if (!$user->hasRoleInCompany('admin', $companyId)) {
             abort(403, 'Seuls les administrateurs peuvent gérer les invitations.');
         }
 
@@ -45,13 +45,13 @@ class InvitationController extends Controller
     public function create(Company $company)
     {
         $user = Auth::user();
-        
-        // Vérifier que l'utilisateur appartient à cette entreprise
-        if (!$user->companies()->where('companies.id', $company->id)->exists()) {
-            abort(403, 'Accès non autorisé. Vous n\'appartenez pas à cette entreprise.');
+        $companyId = $user->current_company_id;
+
+        if ($company->id !== $companyId) {
+            abort(403, 'Accès non autorisé.');
         }
 
-        if (!$user->hasRoleInCompany('admin', $company->id)) {
+        if (!$user->hasRoleInCompany('admin', $companyId)) {
             abort(403, 'Seuls les administrateurs peuvent inviter des utilisateurs.');
         }
 
@@ -66,13 +66,13 @@ class InvitationController extends Controller
     public function store(Request $request, Company $company)
     {
         $user = Auth::user();
-        
-        // Vérifier que l'utilisateur appartient à cette entreprise
-        if (!$user->companies()->where('companies.id', $company->id)->exists()) {
-            abort(403, 'Accès non autorisé. Vous n\'appartenez pas à cette entreprise.');
+        $companyId = $user->current_company_id;
+
+        if ($company->id !== $companyId) {
+            abort(403, 'Accès non autorisé.');
         }
 
-        if (!$user->hasRoleInCompany('admin', $company->id)) {
+        if (!$user->hasRoleInCompany('admin', $companyId)) {
             abort(403, 'Seuls les administrateurs peuvent inviter des utilisateurs.');
         }
 
@@ -236,78 +236,14 @@ class InvitationController extends Controller
     public function show(Company $company, Invitation $invitation)
     {
         $user = Auth::user();
-        
-        // Log au début pour vérifier que la méthode est appelée
-        \Log::info('=== SHOW INVITATION CALLED ===', [
-            'user_id' => $user->id,
-            'user_email' => $user->email,
-            'invitation_id' => $invitation->id,
-            'invitation_invited_by' => $invitation->invited_by,
-            'company_id' => $company->id,
-        ]);
-        
-        // Vérifier que l'utilisateur appartient à cette entreprise
-        if (!$user->companies()->where('companies.id', $company->id)->exists()) {
-            \Log::warning('Show: User does not belong to company', [
-                'user_id' => $user->id,
-                'company_id' => $company->id,
-            ]);
-            abort(403, 'Accès non autorisé. Vous n\'appartenez pas à cette entreprise.');
-        }
-        
-        if ($invitation->company_id !== $company->id) {
-            \Log::warning('Show: Invitation does not belong to company', [
-                'invitation_id' => $invitation->id,
-                'invitation_company_id' => $invitation->company_id,
-                'company_id' => $company->id,
-            ]);
+        $companyId = $user->current_company_id;
+
+        if ($company->id !== $companyId || $invitation->company_id !== $company->id) {
             abort(403, 'Accès non autorisé.');
         }
 
-        // PRIORITÉ 1: Si l'utilisateur a créé l'invitation, lui donner l'accès immédiatement
-        \Log::info('Show: Checking if user is creator', [
-            'user_id' => $user->id,
-            'invited_by' => $invitation->invited_by,
-            'comparison' => ($invitation->invited_by == $user->id),
-        ]);
-        
-        if ($invitation->invited_by == $user->id || $invitation->invited_by === $user->id) {
-            \Log::info('Show: User is creator, allowing access');
-            $invitation->load('inviter', 'role', 'company');
-            return view('invitations.show', compact('company', 'invitation'));
-        }
-
-        // PRIORITÉ 2: Vérifier si l'utilisateur est admin ou super admin
-        $isSuperAdmin = $user->isSuperAdmin();
-        $isAdmin = $isSuperAdmin || $user->hasRoleInCompany('admin', $company->id);
-        
-        // Log pour déboguer
-        \Log::info('Invitation access check', [
-            'user_id' => $user->id,
-            'user_email' => $user->email,
-            'invitation_id' => $invitation->id,
-            'invited_by' => $invitation->invited_by,
-            'isSuperAdmin' => $isSuperAdmin,
-            'isAdmin' => $isAdmin,
-            'isCreator' => ($invitation->invited_by == $user->id),
-            'company_id' => $company->id,
-            'hasRoleInCompany_result' => $user->hasRoleInCompany('admin', $company->id),
-        ]);
-        
-        if (!$isAdmin) {
-            $errorMsg = sprintf(
-                'Accès refusé. User ID: %d, Invited By: %d, Is Admin: %s, Company ID: %d',
-                $user->id,
-                $invitation->invited_by ?? 'NULL',
-                $isAdmin ? 'Oui' : 'Non',
-                $company->id
-            );
-            \Log::warning('Invitation access denied', [
-                'user_id' => $user->id,
-                'invitation_id' => $invitation->id,
-                'error_details' => $errorMsg,
-            ]);
-            abort(403, 'Seuls les administrateurs ou le créateur de l\'invitation peuvent voir les détails.');
+        if (!$user->hasRoleInCompany('admin', $companyId)) {
+            abort(403, 'Seuls les administrateurs peuvent voir les détails des invitations.');
         }
 
         $invitation->load('inviter', 'role', 'company');
@@ -321,52 +257,14 @@ class InvitationController extends Controller
     public function edit(Company $company, Invitation $invitation)
     {
         $user = Auth::user();
-        
-        // Log au début pour vérifier que la méthode est appelée
-        \Log::info('=== EDIT INVITATION CALLED ===', [
-            'user_id' => $user->id,
-            'user_email' => $user->email,
-            'invitation_id' => $invitation->id,
-            'invitation_invited_by' => $invitation->invited_by,
-            'company_id' => $company->id,
-        ]);
-        
-        // Vérifier que l'utilisateur appartient à cette entreprise
-        if (!$user->companies()->where('companies.id', $company->id)->exists()) {
-            \Log::warning('Edit: User does not belong to company', [
-                'user_id' => $user->id,
-                'company_id' => $company->id,
-            ]);
-            abort(403, 'Accès non autorisé. Vous n\'appartenez pas à cette entreprise.');
-        }
-        
-        if ($invitation->company_id !== $company->id) {
-            \Log::warning('Edit: Invitation does not belong to company', [
-                'invitation_id' => $invitation->id,
-                'invitation_company_id' => $invitation->company_id,
-                'company_id' => $company->id,
-            ]);
+        $companyId = $user->current_company_id;
+
+        if ($company->id !== $companyId || $invitation->company_id !== $company->id) {
             abort(403, 'Accès non autorisé.');
         }
 
-        // PRIORITÉ 1: Si l'utilisateur a créé l'invitation, lui donner l'accès immédiatement
-        \Log::info('Edit: Checking if user is creator', [
-            'user_id' => $user->id,
-            'invited_by' => $invitation->invited_by,
-            'comparison' => ($invitation->invited_by == $user->id),
-        ]);
-        
-        if ($invitation->invited_by == $user->id || $invitation->invited_by === $user->id) {
-            \Log::info('Edit: User is creator, allowing access');
-            // L'utilisateur peut modifier son invitation
-        } else {
-            // PRIORITÉ 2: Vérifier si l'utilisateur est admin ou super admin
-            $isSuperAdmin = $user->isSuperAdmin();
-            $isAdmin = $isSuperAdmin || $user->hasRoleInCompany('admin', $company->id);
-            
-            if (!$isAdmin) {
-                abort(403, 'Seuls les administrateurs ou le créateur de l\'invitation peuvent modifier des invitations.');
-            }
+        if (!$user->hasRoleInCompany('admin', $companyId)) {
+            abort(403, 'Seuls les administrateurs peuvent modifier des invitations.');
         }
 
         // Seules les invitations en attente peuvent être modifiées
@@ -386,27 +284,14 @@ class InvitationController extends Controller
     public function update(Request $request, Company $company, Invitation $invitation)
     {
         $user = Auth::user();
-        
-        // Vérifier que l'utilisateur appartient à cette entreprise
-        if (!$user->companies()->where('companies.id', $company->id)->exists()) {
-            abort(403, 'Accès non autorisé. Vous n\'appartenez pas à cette entreprise.');
-        }
-        
-        if ($invitation->company_id !== $company->id) {
+        $companyId = $user->current_company_id;
+
+        if ($company->id !== $companyId || $invitation->company_id !== $company->id) {
             abort(403, 'Accès non autorisé.');
         }
 
-        // PRIORITÉ 1: Si l'utilisateur a créé l'invitation, lui donner l'accès immédiatement
-        if ($invitation->invited_by == $user->id || $invitation->invited_by === $user->id) {
-            // L'utilisateur peut modifier son invitation
-        } else {
-            // PRIORITÉ 2: Vérifier si l'utilisateur est admin ou super admin
-            $isSuperAdmin = $user->isSuperAdmin();
-            $isAdmin = $isSuperAdmin || $user->hasRoleInCompany('admin', $company->id);
-            
-            if (!$isAdmin) {
-                abort(403, 'Seuls les administrateurs ou le créateur de l\'invitation peuvent modifier des invitations.');
-            }
+        if (!$user->hasRoleInCompany('admin', $companyId)) {
+            abort(403, 'Seuls les administrateurs peuvent modifier des invitations.');
         }
 
         // Seules les invitations en attente peuvent être modifiées
@@ -449,27 +334,14 @@ class InvitationController extends Controller
     public function destroy(Company $company, Invitation $invitation)
     {
         $user = Auth::user();
-        
-        // Vérifier que l'utilisateur appartient à cette entreprise
-        if (!$user->companies()->where('companies.id', $company->id)->exists()) {
-            abort(403, 'Accès non autorisé. Vous n\'appartenez pas à cette entreprise.');
-        }
-        
-        if ($invitation->company_id !== $company->id) {
+        $companyId = $user->current_company_id;
+
+        if ($company->id !== $companyId || $invitation->company_id !== $company->id) {
             abort(403, 'Accès non autorisé.');
         }
 
-        // PRIORITÉ 1: Si l'utilisateur a créé l'invitation, lui donner l'accès immédiatement
-        if ($invitation->invited_by == $user->id || $invitation->invited_by === $user->id) {
-            // L'utilisateur peut supprimer son invitation
-        } else {
-            // PRIORITÉ 2: Vérifier si l'utilisateur est admin ou super admin
-            $isSuperAdmin = $user->isSuperAdmin();
-            $isAdmin = $isSuperAdmin || $user->hasRoleInCompany('admin', $company->id);
-            
-            if (!$isAdmin) {
-                abort(403, 'Seuls les administrateurs ou le créateur de l\'invitation peuvent supprimer des invitations.');
-            }
+        if (!$user->hasRoleInCompany('admin', $companyId)) {
+            abort(403, 'Seuls les administrateurs peuvent supprimer des invitations.');
         }
 
         // Supprimer réellement l'invitation de la base de données
@@ -485,27 +357,14 @@ class InvitationController extends Controller
     public function resend(Company $company, Invitation $invitation)
     {
         $user = Auth::user();
-        
-        // Vérifier que l'utilisateur appartient à cette entreprise
-        if (!$user->companies()->where('companies.id', $company->id)->exists()) {
-            abort(403, 'Accès non autorisé. Vous n\'appartenez pas à cette entreprise.');
-        }
-        
-        if ($invitation->company_id !== $company->id) {
+        $companyId = $user->current_company_id;
+
+        if ($company->id !== $companyId || $invitation->company_id !== $company->id) {
             abort(403, 'Accès non autorisé.');
         }
 
-        // PRIORITÉ 1: Si l'utilisateur a créé l'invitation, lui donner l'accès immédiatement
-        if ($invitation->invited_by == $user->id || $invitation->invited_by === $user->id) {
-            // L'utilisateur peut renvoyer son invitation
-        } else {
-            // PRIORITÉ 2: Vérifier si l'utilisateur est admin ou super admin
-            $isSuperAdmin = $user->isSuperAdmin();
-            $isAdmin = $isSuperAdmin || $user->hasRoleInCompany('admin', $company->id);
-            
-            if (!$isAdmin) {
-                abort(403, 'Seuls les administrateurs ou le créateur de l\'invitation peuvent renvoyer des invitations.');
-            }
+        if (!$user->hasRoleInCompany('admin', $companyId)) {
+            abort(403, 'Seuls les administrateurs peuvent renvoyer des invitations.');
         }
 
         if ($invitation->status !== 'pending') {

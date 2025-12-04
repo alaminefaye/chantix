@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-use Illuminate\Support\Facades\DB;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -94,9 +93,6 @@ class User extends Authenticatable implements MustVerifyEmail
             return null;
         }
         
-        // Recharger la relation pour éviter les problèmes de cache
-        $this->load('companies');
-        
         $pivot = $this->companies()
             ->where('companies.id', $companyId)
             ->first()
@@ -129,44 +125,12 @@ class User extends Authenticatable implements MustVerifyEmail
         $companyId = $companyId ?? $this->current_company_id;
         
         if (!$companyId) {
-            \Log::warning('hasRoleInCompany: companyId is null', [
-                'user_id' => $this->id,
-                'role_name' => $roleName,
-            ]);
             return false;
         }
         
-        // Vérification directe dans la base de données pour éviter les problèmes de cache
-        $role = DB::table('company_user')
-            ->join('roles', 'company_user.role_id', '=', 'roles.id')
-            ->where('company_user.user_id', $this->id)
-            ->where('company_user.company_id', $companyId)
-            ->where('company_user.is_active', true)
-            ->select('roles.name', 'roles.id')
-            ->first();
+        $role = $this->roleInCompany($companyId);
         
-        if (!$role) {
-            \Log::warning('hasRoleInCompany: role not found', [
-                'user_id' => $this->id,
-                'company_id' => $companyId,
-                'role_name' => $roleName,
-            ]);
-            return false;
-        }
-        
-        // Vérifier le nom du rôle (insensible à la casse pour plus de robustesse)
-        $hasRole = strtolower($role->name) === strtolower($roleName);
-        
-        if (!$hasRole) {
-            \Log::info('hasRoleInCompany: role mismatch', [
-                'user_id' => $this->id,
-                'company_id' => $companyId,
-                'requested_role' => $roleName,
-                'actual_role' => $role->name,
-            ]);
-        }
-        
-        return $hasRole;
+        return $role && $role->name === $roleName;
     }
 
     /**
@@ -185,18 +149,13 @@ class User extends Authenticatable implements MustVerifyEmail
             return false;
         }
         
-        // Vérifier d'abord si l'utilisateur est admin (plus rapide et plus fiable)
-        if ($this->hasRoleInCompany('admin', $companyId)) {
-            return true;
-        }
-        
         $role = $this->roleInCompany($companyId);
         
         if (!$role) {
             return false;
         }
         
-        // Admin a toutes les permissions (double vérification)
+        // Admin a toutes les permissions
         if ($role->name === 'admin') {
             return true;
         }
