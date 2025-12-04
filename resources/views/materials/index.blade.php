@@ -18,16 +18,12 @@
             @endif
           </div>
           <div class="d-flex gap-2">
-            @can('materials.import')
             <a href="{{ route('materials.import') }}" class="btn btn-info">
               <i class="ti ti-upload me-2"></i>Importer Excel
             </a>
-            @endcan
-            @can('materials.create')
             <a href="{{ route('materials.create') }}" class="btn btn-primary">
               <i class="ti ti-plus me-2"></i>Ajouter un matériau
             </a>
-            @endcan
           </div>
         </div>
 

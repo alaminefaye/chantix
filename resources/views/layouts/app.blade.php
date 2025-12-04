@@ -67,8 +67,8 @@
               $roleName = $currentRole ? $currentRole->name : null;
             @endphp
             
-            {{-- Projets --}}
-            @can('projects.view')
+            {{-- Projets - Visible pour tous les rôles --}}
+            @if($user->hasPermission('projects.view'))
               <li class="sidebar-item">
                 <a class="sidebar-link {{ request()->routeIs('projects.*') ? 'active' : '' }}" href="{{ route('projects.index') }}" aria-expanded="false">
                   <span>
@@ -77,10 +77,10 @@
                   <span class="hide-menu">Projets</span>
                 </a>
               </li>
-            @endcan
+            @endif
 
-            {{-- Matériaux --}}
-            @can('materials.view')
+            {{-- Matériaux - Visible pour Admin et Chef de Chantier --}}
+            @if($user->hasPermission('materials.manage') || $user->hasRoleInCompany('admin'))
               <li class="sidebar-item">
                 <a class="sidebar-link {{ request()->routeIs('materials.*') ? 'active' : '' }}" href="{{ route('materials.index') }}" aria-expanded="false">
                   <span>
@@ -89,10 +89,10 @@
                   <span class="hide-menu">Matériaux</span>
                 </a>
               </li>
-            @endcan
+            @endif
 
-            {{-- Employés --}}
-            @can('employees.view')
+            {{-- Employés - Visible pour Admin et Chef de Chantier (pour gérer l'équipe) --}}
+            @if($user->hasPermission('projects.manage_team') || $user->hasRoleInCompany('admin'))
               <li class="sidebar-item">
                 <a class="sidebar-link {{ request()->routeIs('employees.*') ? 'active' : '' }}" href="{{ route('employees.index') }}" aria-expanded="false">
                   <span>
@@ -101,7 +101,7 @@
                   <span class="hide-menu">Employés</span>
                 </a>
               </li>
-            @endcan
+            @endif
 
             {{-- Entreprises - Visible uniquement pour Super Admin --}}
             @if($user->isSuperAdmin())
@@ -115,24 +115,22 @@
               </li>
             @endif
 
-            {{-- Utilisateurs - Visible pour les Admins --}}
-            @can('users.view')
-              @if($user->current_company_id)
-                @php
-                  $currentCompany = \App\Models\Company::find($user->current_company_id);
-                @endphp
-                @if($currentCompany)
-                  <li class="sidebar-item">
-                    <a class="sidebar-link {{ request()->routeIs('users.*') ? 'active' : '' }}" href="{{ route('users.index', $currentCompany) }}" aria-expanded="false">
-                      <span>
-                        <i class="ti ti-user-plus"></i>
-                      </span>
-                      <span class="hide-menu">Utilisateurs</span>
-                    </a>
-                  </li>
-                @endif
+            {{-- Invitations - Visible pour les Admins (pas super admin) --}}
+            @if($user->hasRoleInCompany('admin') && !$user->isSuperAdmin() && $user->current_company_id)
+              @php
+                $currentCompany = \App\Models\Company::find($user->current_company_id);
+              @endphp
+              @if($currentCompany)
+                <li class="sidebar-item">
+                  <a class="sidebar-link {{ request()->routeIs('invitations.*') ? 'active' : '' }}" href="{{ route('invitations.index', $currentCompany) }}" aria-expanded="false">
+                    <span>
+                      <i class="ti ti-user-plus"></i>
+                    </span>
+                    <span class="hide-menu">Invitations</span>
+                  </a>
+                </li>
               @endif
-            @endcan
+            @endif
           </ul>
         </nav>
         <!-- End Sidebar navigation -->

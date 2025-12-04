@@ -7,12 +7,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasApiTokens, HasRoles;
+    use HasFactory, Notifiable, HasApiTokens;
 
     /**
      * The attributes that are mass assignable.
@@ -136,7 +135,6 @@ class User extends Authenticatable implements MustVerifyEmail
 
     /**
      * Vérifier si l'utilisateur a une permission spécifique
-     * Utilise Spatie Permissions avec support multi-entreprises
      */
     public function hasPermission($permission, $companyId = null)
     {
@@ -162,8 +160,10 @@ class User extends Authenticatable implements MustVerifyEmail
             return true;
         }
         
-        // Utiliser Spatie Permissions
-        return $this->can($permission);
+        $permissions = $role->permissions ?? [];
+        
+        // Vérifier si la permission est dans la liste ou si c'est '*'
+        return in_array('*', $permissions) || in_array($permission, $permissions);
     }
 
     /**
@@ -271,19 +271,5 @@ class User extends Authenticatable implements MustVerifyEmail
     public function isVerified()
     {
         return $this->is_verified === true || $this->isSuperAdmin();
-    }
-
-    /**
-     * Surcharger la méthode can() pour que le super admin ait toujours accès
-     */
-    public function can($permission, $guardName = null)
-    {
-        // Super admin a toutes les permissions
-        if ($this->isSuperAdmin()) {
-            return true;
-        }
-
-        // Utiliser la méthode can() de Spatie Permissions
-        return parent::can($permission, $guardName);
     }
 }

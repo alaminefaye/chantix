@@ -78,14 +78,14 @@
           <p class="mb-0">Cette entreprise a <strong>{{ $company->projects()->count() }}</strong> projet(s)</p>
         </div>
 
-        @can('users.view')
+        @if(auth()->user()->hasRoleInCompany('admin', $company->id))
           <hr class="my-4">
           <div class="d-flex gap-2">
-            <a href="{{ route('users.index', $company) }}" class="btn btn-primary">
-              <i class="ti ti-users me-2"></i>Gérer les utilisateurs
+            <a href="{{ route('invitations.index', $company) }}" class="btn btn-primary">
+              <i class="ti ti-user-plus me-2"></i>Gérer les invitations
             </a>
           </div>
-        @endcan
+        @endif
       </div>
     </div>
   </div>

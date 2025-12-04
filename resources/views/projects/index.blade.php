@@ -16,11 +16,9 @@
             <a href="{{ route('projects.index', array_merge(request()->all(), ['view' => 'map'])) }}" class="btn btn-sm btn-outline-primary {{ ($view ?? 'list') === 'map' ? 'active' : '' }}">
               <i class="ti ti-map me-1"></i>Carte
             </a>
-            @can('projects.create')
             <a href="{{ route('projects.create') }}" class="btn btn-primary">
               <i class="ti ti-plus me-2"></i>Créer un projet
             </a>
-            @endcan
           </div>
         </div>
 

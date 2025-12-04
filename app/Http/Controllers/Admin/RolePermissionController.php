@@ -142,7 +142,7 @@ class RolePermissionController extends Controller
         }
 
         // Vérifier si le rôle est utilisé
-        if ($role->companyUsers()->count() > 0) {
+        if ($role->users()->count() > 0) {
             return redirect()->route('admin.roles.index')
                 ->with('error', 'Impossible de supprimer ce rôle car il est utilisé par des utilisateurs.');
         }

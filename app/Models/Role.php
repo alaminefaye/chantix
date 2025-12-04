@@ -2,13 +2,12 @@
 
 namespace App\Models;
 
-use Spatie\Permission\Models\Role as SpatieRole;
+use Illuminate\Database\Eloquent\Model;
 
-class Role extends SpatieRole
+class Role extends Model
 {
     protected $fillable = [
         'name',
-        'guard_name',
         'display_name',
         'description',
         'permissions',
@@ -19,10 +18,9 @@ class Role extends SpatieRole
     ];
 
     /**
-     * Les utilisateurs ayant ce rôle dans les entreprises (via company_user)
-     * Note: Spatie a déjà une méthode users() pour les rôles Spatie
+     * Les utilisateurs ayant ce rôle
      */
-    public function companyUsers()
+    public function users()
     {
         return $this->belongsToMany(User::class, 'company_user')
                     ->withPivot('company_id', 'is_active')

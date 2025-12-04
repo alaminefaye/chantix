@@ -10,16 +10,12 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
           <h5 class="card-title fw-semibold mb-0">Employés</h5>
           <div class="d-flex gap-2">
-            @can('employees.import')
             <a href="{{ route('employees.import') }}" class="btn btn-info">
               <i class="ti ti-upload me-2"></i>Importer Excel
             </a>
-            @endcan
-            @can('employees.create')
             <a href="{{ route('employees.create') }}" class="btn btn-primary">
               <i class="ti ti-plus me-2"></i>Ajouter un employé
             </a>
-            @endcan
           </div>
         </div>
 

@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\User;
-use App\Models\Role;
 use Illuminate\Support\Facades\Hash;
 
 class SuperAdminSeeder extends Seeder
@@ -25,12 +24,6 @@ class SuperAdminSeeder extends Seeder
                 'email_verified_at' => now(),
             ]
         );
-
-        // Assigner le rôle super_admin de Spatie Permissions
-        $superAdminRole = Role::where('name', 'super_admin')->where('guard_name', 'web')->first();
-        if ($superAdminRole) {
-            $superAdmin->syncRoles([$superAdminRole]);
-        }
 
         $this->command->info('Super administrateur créé/mis à jour avec succès !');
         $this->command->info('Email: admin@admin.com');
