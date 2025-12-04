@@ -20,31 +20,16 @@ class InvitationController extends Controller
     public function index(Company $company)
     {
         $user = Auth::user();
+        $companyId = $user->current_company_id;
 
-        // Super admin peut accéder à tout
-        if ($user->isSuperAdmin()) {
-            $invitations = $company->invitations()
-                ->with('inviter', 'role')
-                ->orderBy('created_at', 'desc')
-                ->paginate(20);
-            return view('invitations.index', compact('company', 'invitations'));
+        // Super admin peut accéder à toutes les entreprises
+        if (!$user->canAccessCompanyResource($company->id)) {
+            abort(403, 'Accès non autorisé.');
         }
 
-        // Vérifier que l'utilisateur appartient à cette company
-        $belongsToCompany = $user->companies()->where('companies.id', $company->id)->exists();
-        if (!$belongsToCompany) {
-            abort(403, 'Vous n\'appartenez pas à cette entreprise.');
-        }
-
-        // Vérifier le rôle - méthode plus directe
-        $pivot = $user->companies()->where('companies.id', $company->id)->first()?->pivot;
-        if (!$pivot || !$pivot->role_id) {
-            abort(403, 'Vous n\'avez pas de rôle défini dans cette entreprise.');
-        }
-
-        $role = Role::find($pivot->role_id);
-        if (!$role || $role->name !== 'admin') {
-            abort(403, 'Seuls les administrateurs peuvent gérer les invitations. Votre rôle: ' . ($role ? $role->name : 'non défini'));
+        // Vérifier que l'utilisateur est admin ou super admin
+        if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $company->id)) {
+            abort(403, 'Seuls les administrateurs peuvent gérer les invitations.');
         }
 
         $invitations = $company->invitations()
@@ -61,34 +46,21 @@ class InvitationController extends Controller
     public function create(Company $company)
     {
         $user = Auth::user();
+        $companyId = $user->current_company_id;
 
-        // Super admin peut accéder à tout
-        if ($user->isSuperAdmin()) {
-            $roles = Role::all();
-            return view('invitations.create', compact('company', 'roles'));
+        // Super admin peut accéder à toutes les entreprises
+        if (!$user->canAccessCompanyResource($company->id)) {
+            abort(403, 'Accès non autorisé.');
         }
 
-        // Vérifier que l'utilisateur appartient à cette company
-        $belongsToCompany = $user->companies()->where('companies.id', $company->id)->exists();
-        if (!$belongsToCompany) {
-            abort(403, 'Vous n\'appartenez pas à cette entreprise.');
-        }
-
-        // Vérifier le rôle - méthode plus directe
-        $pivot = $user->companies()->where('companies.id', $company->id)->first()?->pivot;
-        if (!$pivot || !$pivot->role_id) {
-            abort(403, 'Vous n\'avez pas de rôle défini dans cette entreprise.');
-        }
-
-        $role = Role::find($pivot->role_id);
-        if (!$role || $role->name !== 'admin') {
-            abort(403, 'Seuls les administrateurs peuvent inviter des utilisateurs. Votre rôle: ' . ($role ? $role->name : 'non défini'));
+        // Vérifier que l'utilisateur est admin ou super admin
+        if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $company->id)) {
+            abort(403, 'Seuls les administrateurs peuvent inviter des utilisateurs.');
         }
 
         $roles = Role::all();
 
         return view('invitations.create', compact('company', 'roles'));
-
     }
 
     /**
@@ -97,25 +69,16 @@ class InvitationController extends Controller
     public function store(Request $request, Company $company)
     {
         $user = Auth::user();
+        $companyId = $user->current_company_id;
 
-        // Super admin peut accéder à tout
-        if (!$user->isSuperAdmin()) {
-            // Vérifier que l'utilisateur appartient à cette company
-            $belongsToCompany = $user->companies()->where('companies.id', $company->id)->exists();
-            if (!$belongsToCompany) {
-                abort(403, 'Vous n\'appartenez pas à cette entreprise.');
-            }
+        // Super admin peut accéder à toutes les entreprises
+        if (!$user->canAccessCompanyResource($company->id)) {
+            abort(403, 'Accès non autorisé.');
+        }
 
-            // Vérifier le rôle - méthode plus directe
-            $pivot = $user->companies()->where('companies.id', $company->id)->first()?->pivot;
-            if (!$pivot || !$pivot->role_id) {
-                abort(403, 'Vous n\'avez pas de rôle défini dans cette entreprise.');
-            }
-
-            $role = Role::find($pivot->role_id);
-            if (!$role || $role->name !== 'admin') {
-                abort(403, 'Seuls les administrateurs peuvent inviter des utilisateurs. Votre rôle: ' . ($role ? $role->name : 'non défini'));
-            }
+        // Vérifier que l'utilisateur est admin ou super admin
+        if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $company->id)) {
+            abort(403, 'Seuls les administrateurs peuvent inviter des utilisateurs.');
         }
 
         $validated = $request->validate([
@@ -278,33 +241,16 @@ class InvitationController extends Controller
     public function show(Company $company, Invitation $invitation)
     {
         $user = Auth::user();
+        $companyId = $user->current_company_id;
 
-        // Vérifier que l'invitation appartient à la company
-        if ($invitation->company_id !== $company->id) {
+        // Super admin peut accéder à toutes les entreprises
+        if (!$user->canAccessCompanyResource($company->id) || $invitation->company_id !== $company->id) {
             abort(403, 'Accès non autorisé.');
         }
 
-        // Super admin peut accéder à tout
-        if ($user->isSuperAdmin()) {
-            $invitation->load('inviter', 'role', 'company');
-            return view('invitations.show', compact('company', 'invitation'));
-        }
-
-        // Vérifier que l'utilisateur appartient à cette company
-        $belongsToCompany = $user->companies()->where('companies.id', $company->id)->exists();
-        if (!$belongsToCompany) {
-            abort(403, 'Vous n\'appartenez pas à cette entreprise.');
-        }
-
-        // Vérifier le rôle - méthode plus directe
-        $pivot = $user->companies()->where('companies.id', $company->id)->first()?->pivot;
-        if (!$pivot || !$pivot->role_id) {
-            abort(403, 'Vous n\'avez pas de rôle défini dans cette entreprise.');
-        }
-
-        $role = Role::find($pivot->role_id);
-        if (!$role || $role->name !== 'admin') {
-            abort(403, 'Seuls les administrateurs peuvent voir les détails des invitations. Votre rôle: ' . ($role ? $role->name : 'non défini'));
+        // Vérifier que l'utilisateur est admin ou super admin
+        if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $company->id)) {
+            abort(403, 'Seuls les administrateurs peuvent voir les détails des invitations.');
         }
 
         $invitation->load('inviter', 'role', 'company');
@@ -318,38 +264,16 @@ class InvitationController extends Controller
     public function edit(Company $company, Invitation $invitation)
     {
         $user = Auth::user();
+        $companyId = $user->current_company_id;
 
-        // Vérifier que l'invitation appartient à la company
-        if ($invitation->company_id !== $company->id) {
+        // Super admin peut accéder à toutes les entreprises
+        if (!$user->canAccessCompanyResource($company->id) || $invitation->company_id !== $company->id) {
             abort(403, 'Accès non autorisé.');
         }
 
-        // Super admin peut accéder à tout
-        if ($user->isSuperAdmin()) {
-            // Seules les invitations en attente peuvent être modifiées
-            if ($invitation->status !== 'pending' || $invitation->isExpired()) {
-                return redirect()->route('invitations.index', $company)
-                    ->with('error', 'Seules les invitations en attente peuvent être modifiées.');
-            }
-            $roles = Role::all();
-            return view('invitations.edit', compact('company', 'invitation', 'roles'));
-        }
-
-        // Vérifier que l'utilisateur appartient à cette company
-        $belongsToCompany = $user->companies()->where('companies.id', $company->id)->exists();
-        if (!$belongsToCompany) {
-            abort(403, 'Vous n\'appartenez pas à cette entreprise.');
-        }
-
-        // Vérifier le rôle - méthode plus directe
-        $pivot = $user->companies()->where('companies.id', $company->id)->first()?->pivot;
-        if (!$pivot || !$pivot->role_id) {
-            abort(403, 'Vous n\'avez pas de rôle défini dans cette entreprise.');
-        }
-
-        $role = Role::find($pivot->role_id);
-        if (!$role || $role->name !== 'admin') {
-            abort(403, 'Seuls les administrateurs peuvent modifier des invitations. Votre rôle: ' . ($role ? $role->name : 'non défini'));
+        // Vérifier que l'utilisateur est admin ou super admin
+        if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $company->id)) {
+            abort(403, 'Seuls les administrateurs peuvent modifier des invitations.');
         }
 
         // Seules les invitations en attente peuvent être modifiées
@@ -369,30 +293,16 @@ class InvitationController extends Controller
     public function update(Request $request, Company $company, Invitation $invitation)
     {
         $user = Auth::user();
+        $companyId = $user->current_company_id;
 
-        // Vérifier que l'invitation appartient à la company
-        if ($invitation->company_id !== $company->id) {
+        // Super admin peut accéder à toutes les entreprises
+        if (!$user->canAccessCompanyResource($company->id) || $invitation->company_id !== $company->id) {
             abort(403, 'Accès non autorisé.');
         }
 
-        // Super admin peut accéder à tout
-        if (!$user->isSuperAdmin()) {
-            // Vérifier que l'utilisateur appartient à cette company
-            $belongsToCompany = $user->companies()->where('companies.id', $company->id)->exists();
-            if (!$belongsToCompany) {
-                abort(403, 'Vous n\'appartenez pas à cette entreprise.');
-            }
-
-            // Vérifier le rôle - méthode plus directe
-            $pivot = $user->companies()->where('companies.id', $company->id)->first()?->pivot;
-            if (!$pivot || !$pivot->role_id) {
-                abort(403, 'Vous n\'avez pas de rôle défini dans cette entreprise.');
-            }
-
-            $role = Role::find($pivot->role_id);
-            if (!$role || $role->name !== 'admin') {
-                abort(403, 'Seuls les administrateurs peuvent modifier des invitations. Votre rôle: ' . ($role ? $role->name : 'non défini'));
-            }
+        // Vérifier que l'utilisateur est admin ou super admin
+        if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $company->id)) {
+            abort(403, 'Seuls les administrateurs peuvent modifier des invitations.');
         }
 
         // Seules les invitations en attente peuvent être modifiées
@@ -435,34 +345,16 @@ class InvitationController extends Controller
     public function destroy(Company $company, Invitation $invitation)
     {
         $user = Auth::user();
+        $companyId = $user->current_company_id;
 
-        // Vérifier que l'invitation appartient à la company
-        if ($invitation->company_id !== $company->id) {
+        // Super admin peut accéder à toutes les entreprises
+        if (!$user->canAccessCompanyResource($company->id) || $invitation->company_id !== $company->id) {
             abort(403, 'Accès non autorisé.');
         }
 
-        // Super admin peut accéder à tout
-        if ($user->isSuperAdmin()) {
-            $invitation->delete();
-            return redirect()->route('invitations.index', $company)
-                ->with('success', 'Invitation supprimée avec succès.');
-        }
-
-        // Vérifier que l'utilisateur appartient à cette company
-        $belongsToCompany = $user->companies()->where('companies.id', $company->id)->exists();
-        if (!$belongsToCompany) {
-            abort(403, 'Vous n\'appartenez pas à cette entreprise.');
-        }
-
-        // Vérifier le rôle - méthode plus directe
-        $pivot = $user->companies()->where('companies.id', $company->id)->first()?->pivot;
-        if (!$pivot || !$pivot->role_id) {
-            abort(403, 'Vous n\'avez pas de rôle défini dans cette entreprise.');
-        }
-
-        $role = Role::find($pivot->role_id);
-        if (!$role || $role->name !== 'admin') {
-            abort(403, 'Seuls les administrateurs peuvent supprimer des invitations. Votre rôle: ' . ($role ? $role->name : 'non défini'));
+        // Vérifier que l'utilisateur est admin ou super admin
+        if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $company->id)) {
+            abort(403, 'Seuls les administrateurs peuvent supprimer des invitations.');
         }
 
         // Supprimer réellement l'invitation de la base de données
@@ -478,30 +370,16 @@ class InvitationController extends Controller
     public function resend(Company $company, Invitation $invitation)
     {
         $user = Auth::user();
+        $companyId = $user->current_company_id;
 
-        // Vérifier que l'invitation appartient à la company
-        if ($invitation->company_id !== $company->id) {
+        // Super admin peut accéder à toutes les entreprises
+        if (!$user->canAccessCompanyResource($company->id) || $invitation->company_id !== $company->id) {
             abort(403, 'Accès non autorisé.');
         }
 
-        // Super admin peut accéder à tout
-        if (!$user->isSuperAdmin()) {
-            // Vérifier que l'utilisateur appartient à cette company
-            $belongsToCompany = $user->companies()->where('companies.id', $company->id)->exists();
-            if (!$belongsToCompany) {
-                abort(403, 'Vous n\'appartenez pas à cette entreprise.');
-            }
-
-            // Vérifier le rôle - méthode plus directe
-            $pivot = $user->companies()->where('companies.id', $company->id)->first()?->pivot;
-            if (!$pivot || !$pivot->role_id) {
-                abort(403, 'Vous n\'avez pas de rôle défini dans cette entreprise.');
-            }
-
-            $role = Role::find($pivot->role_id);
-            if (!$role || $role->name !== 'admin') {
-                abort(403, 'Seuls les administrateurs peuvent renvoyer des invitations. Votre rôle: ' . ($role ? $role->name : 'non défini'));
-            }
+        // Vérifier que l'utilisateur est admin ou super admin
+        if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $company->id)) {
+            abort(403, 'Seuls les administrateurs peuvent renvoyer des invitations.');
         }
 
         if ($invitation->status !== 'pending') {

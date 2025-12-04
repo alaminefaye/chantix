@@ -7,11 +7,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasApiTokens;
+    use HasFactory, Notifiable, HasApiTokens, HasRoles;
 
     /**
      * The attributes that are mass assignable.
@@ -128,24 +129,14 @@ class User extends Authenticatable implements MustVerifyEmail
             return false;
         }
         
-        // Vérifier directement dans la table pivot pour plus de fiabilité
-        $pivot = $this->companies()
-            ->where('companies.id', $companyId)
-            ->first()
-            ?->pivot;
-        
-        if (!$pivot || !$pivot->role_id) {
-            return false;
-        }
-        
-        // Récupérer le rôle
-        $role = Role::find($pivot->role_id);
+        $role = $this->roleInCompany($companyId);
         
         return $role && $role->name === $roleName;
     }
 
     /**
      * Vérifier si l'utilisateur a une permission spécifique
+     * Utilise Spatie Permissions avec support multi-entreprises
      */
     public function hasPermission($permission, $companyId = null)
     {
@@ -171,10 +162,8 @@ class User extends Authenticatable implements MustVerifyEmail
             return true;
         }
         
-        $permissions = $role->permissions ?? [];
-        
-        // Vérifier si la permission est dans la liste ou si c'est '*'
-        return in_array('*', $permissions) || in_array($permission, $permissions);
+        // Utiliser Spatie Permissions
+        return $this->can($permission);
     }
 
     /**

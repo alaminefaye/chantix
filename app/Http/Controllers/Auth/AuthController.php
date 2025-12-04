@@ -154,13 +154,15 @@ class AuthController extends Controller
             ]);
 
             // Attacher l'utilisateur à l'entreprise avec le rôle admin
-            $adminRole = \App\Models\Role::where('name', 'admin')->first();
+            $adminRole = \Spatie\Permission\Models\Role::where('name', 'admin')->first();
             if ($adminRole) {
                 $user->companies()->attach($company->id, [
                     'role_id' => $adminRole->id,
                     'is_active' => true,
                     'joined_at' => now(),
                 ]);
+                // Assigner le rôle Spatie
+                $user->assignRole($adminRole);
             }
 
             $user->current_company_id = $company->id;

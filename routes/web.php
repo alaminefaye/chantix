@@ -45,20 +45,16 @@ Route::middleware(['auth', 'verified', 'company'])->group(function () {
     Route::resource('companies', CompanyController::class)->except(['destroy']);
     Route::post('/companies/{company}/switch', [CompanyController::class, 'switch'])->name('companies.switch');
     
-    // Invitations
-    Route::prefix('companies/{company}')->name('invitations.')->group(function () {
-        Route::get('/invitations', [\App\Http\Controllers\InvitationController::class, 'index'])->name('index');
-        Route::get('/invitations/create', [\App\Http\Controllers\InvitationController::class, 'create'])->name('create');
-        Route::post('/invitations', [\App\Http\Controllers\InvitationController::class, 'store'])->name('store');
-        Route::get('/invitations/{invitation}', [\App\Http\Controllers\InvitationController::class, 'show'])->name('show');
-        Route::get('/invitations/{invitation}/edit', [\App\Http\Controllers\InvitationController::class, 'edit'])->name('edit');
-        Route::put('/invitations/{invitation}', [\App\Http\Controllers\InvitationController::class, 'update'])->name('update');
-        Route::post('/invitations/{invitation}/resend', [\App\Http\Controllers\InvitationController::class, 'resend'])->name('resend');
-        Route::delete('/invitations/{invitation}', [\App\Http\Controllers\InvitationController::class, 'destroy'])->name('destroy');
+    // Users (remplace les invitations)
+    Route::prefix('companies/{company}')->name('users.')->group(function () {
+        Route::get('/users', [\App\Http\Controllers\UserController::class, 'index'])->name('index');
+        Route::get('/users/create', [\App\Http\Controllers\UserController::class, 'create'])->name('create');
+        Route::post('/users', [\App\Http\Controllers\UserController::class, 'store'])->name('store');
+        Route::get('/users/{user}', [\App\Http\Controllers\UserController::class, 'show'])->name('show');
+        Route::get('/users/{user}/edit', [\App\Http\Controllers\UserController::class, 'edit'])->name('edit');
+        Route::put('/users/{user}', [\App\Http\Controllers\UserController::class, 'update'])->name('update');
+        Route::delete('/users/{user}', [\App\Http\Controllers\UserController::class, 'destroy'])->name('destroy');
     });
-    
-    // Accepter une invitation (route publique)
-    Route::get('/invitations/accept/{token}', [\App\Http\Controllers\InvitationController::class, 'accept'])->name('invitations.accept');
     
     // Projects
     Route::resource('projects', ProjectController::class)->names([

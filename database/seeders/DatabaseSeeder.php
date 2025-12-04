@@ -15,9 +15,10 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Seed les rôles
+        // Seed les permissions et rôles avec Spatie
         $this->call([
-            RoleSeeder::class,
+            PagePermissionSeeder::class,
+            RolePermissionSeeder::class,
             SuperAdminSeeder::class,
         ]);
     }
