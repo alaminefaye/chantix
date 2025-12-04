@@ -129,10 +129,12 @@ class InvitationController extends Controller
                 // Vérifier qu'il n'est pas déjà dans l'entreprise
                 if (!$company->users()->where('users.id', $existingUser->id)->exists()) {
                     // Vérifier automatiquement l'utilisateur s'il ne l'est pas déjà
-                    if (!$existingUser->is_verified) {
-                        $existingUser->is_verified = true;
-                        $existingUser->email_verified_at = now();
-                        $existingUser->save();
+                    if (!$existingUser->isVerified()) {
+                        // Forcer la mise à jour avec update() pour être sûr
+                        $existingUser->update([
+                            'is_verified' => true,
+                            'email_verified_at' => now(),
+                        ]);
                         $existingUser->refresh();
                         
                         // Log pour déboguer
@@ -140,6 +142,7 @@ class InvitationController extends Controller
                             'user_id' => $existingUser->id,
                             'email' => $existingUser->email,
                             'is_verified' => $existingUser->is_verified,
+                            'is_verified_raw' => $existingUser->getRawOriginal('is_verified'),
                             'isVerified_method' => $existingUser->isVerified(),
                         ]);
                     }
@@ -155,15 +158,21 @@ class InvitationController extends Controller
                 }
             } else {
                 // Créer un nouvel utilisateur directement
-                $newUser = User::create([
-                    'name' => $validated['name'],
-                    'email' => $validated['email'],
-                    'password' => Hash::make($validated['password']),
-                    'is_verified' => true, // L'utilisateur créé directement est automatiquement vérifié
-                    'email_verified_at' => now(), // Email vérifié automatiquement
+                $newUser = new User();
+                $newUser->name = $validated['name'];
+                $newUser->email = $validated['email'];
+                $newUser->password = Hash::make($validated['password']);
+                $newUser->is_verified = true; // L'utilisateur créé directement est automatiquement vérifié
+                $newUser->email_verified_at = now(); // Email vérifié automatiquement
+                $newUser->save();
+                
+                // Forcer la mise à jour pour s'assurer que les valeurs sont bien sauvegardées
+                $newUser->update([
+                    'is_verified' => true,
+                    'email_verified_at' => now(),
                 ]);
                 
-                // S'assurer que la valeur est bien sauvegardée (rafraîchir depuis la DB)
+                // Rafraîchir depuis la DB
                 $newUser->refresh();
                 
                 // Log pour déboguer
@@ -171,6 +180,7 @@ class InvitationController extends Controller
                     'user_id' => $newUser->id,
                     'email' => $newUser->email,
                     'is_verified' => $newUser->is_verified,
+                    'is_verified_raw' => $newUser->getRawOriginal('is_verified'),
                     'is_verified_type' => gettype($newUser->is_verified),
                     'email_verified_at' => $newUser->email_verified_at,
                     'isVerified_method' => $newUser->isVerified(),

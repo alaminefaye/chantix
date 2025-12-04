@@ -295,11 +295,12 @@ class User extends Authenticatable implements MustVerifyEmail
             return true;
         }
         
-        // Vérifier is_verified (peut être true, 1, ou '1' selon le contexte)
-        $isVerified = $this->is_verified === true 
-                   || $this->is_verified === 1 
-                   || $this->is_verified === '1'
-                   || (bool) $this->is_verified === true;
+        // Récupérer la valeur brute depuis la base de données pour éviter les problèmes de cast
+        $isVerifiedRaw = $this->getRawOriginal('is_verified');
+        $isVerified = $isVerifiedRaw === 1 
+                   || $isVerifiedRaw === true 
+                   || $isVerifiedRaw === '1'
+                   || (bool) $isVerifiedRaw === true;
         
         // Aussi vérifier email_verified_at pour être sûr
         $hasEmailVerified = $this->email_verified_at !== null;
