@@ -258,13 +258,19 @@ class InvitationController extends Controller
         $companyId = $user->current_company_id;
 
         // Super admin peut accéder à toutes les entreprises
-        if (!$user->canAccessCompanyResource($company->id) || $invitation->company_id !== $company->id) {
+        $canAccess = $user->canAccessCompanyResource($company->id);
+        $invitationMatches = (int) $invitation->company_id === (int) $company->id;
+        
+        if (!$canAccess || !$invitationMatches) {
             \Log::warning('Accès refusé - canAccessCompanyResource', [
                 'user_id' => $user->id,
                 'company_id' => $company->id,
+                'invitation_company_id' => $invitation->company_id,
                 'current_company_id' => $user->current_company_id,
                 'is_super_admin' => $user->isSuperAdmin(),
                 'user_companies' => $user->companies()->get()->pluck('id')->toArray(),
+                'can_access' => $canAccess,
+                'invitation_matches' => $invitationMatches,
             ]);
             abort(403, 'Accès non autorisé. Vous n\'appartenez pas à cette entreprise.');
         }

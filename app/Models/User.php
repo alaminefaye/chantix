@@ -266,8 +266,23 @@ class User extends Authenticatable implements MustVerifyEmail
         
         // Vérifier si l'utilisateur appartient réellement à cette entreprise
         // Utiliser get() puis vérifier dans la collection pour éviter les problèmes SQL
-        $userCompanyIds = $this->companies()->get()->pluck('id')->toArray();
-        return in_array($companyId, $userCompanyIds);
+        $userCompanyIds = $this->companies()->get()->pluck('id')->map(function ($id) {
+            return (int) $id; // S'assurer que tous les IDs sont des entiers
+        })->toArray();
+        
+        $result = in_array($companyId, $userCompanyIds, true); // strict comparison
+        
+        // Log pour déboguer si nécessaire
+        if (!$result) {
+            \Log::debug('canAccessCompanyResource failed', [
+                'user_id' => $this->id,
+                'requested_company_id' => $companyId,
+                'user_company_ids' => $userCompanyIds,
+                'type_company_id' => gettype($companyId),
+            ]);
+        }
+        
+        return $result;
     }
 
     /**
