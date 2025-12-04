@@ -22,13 +22,18 @@ class InvitationController extends Controller
         $user = Auth::user();
         $companyId = $user->current_company_id;
 
-        if ($company->id !== $companyId) {
-            abort(403, 'Accès non autorisé.');
-        }
+        // Super admin peut accéder à toutes les entreprises
+        if (!$user->isSuperAdmin()) {
+            if ($company->id !== $companyId) {
+                abort(403, 'Accès non autorisé. Vous n\'avez pas accès à cette entreprise.');
+            }
 
-        // Vérifier que l'utilisateur est admin
-        if (!$user->hasRoleInCompany('admin', $companyId)) {
-            abort(403, 'Seuls les administrateurs peuvent gérer les invitations.');
+            // Vérifier que l'utilisateur est admin
+            $role = $user->roleInCompany($companyId);
+            if (!$role || $role->name !== 'admin') {
+                $roleName = $role ? $role->display_name : 'aucun rôle';
+                abort(403, "Seuls les administrateurs peuvent gérer les invitations. Votre rôle actuel : {$roleName}");
+            }
         }
 
         $invitations = $company->invitations()
@@ -47,12 +52,15 @@ class InvitationController extends Controller
         $user = Auth::user();
         $companyId = $user->current_company_id;
 
-        if ($company->id !== $companyId) {
-            abort(403, 'Accès non autorisé.');
-        }
+        // Super admin peut accéder à toutes les entreprises
+        if (!$user->isSuperAdmin()) {
+            if ($company->id !== $companyId) {
+                abort(403, 'Accès non autorisé.');
+            }
 
-        if (!$user->hasRoleInCompany('admin', $companyId)) {
-            abort(403, 'Seuls les administrateurs peuvent inviter des utilisateurs.');
+            if (!$user->hasRoleInCompany('admin', $companyId)) {
+                abort(403, 'Seuls les administrateurs peuvent inviter des utilisateurs.');
+            }
         }
 
         $roles = Role::all();
