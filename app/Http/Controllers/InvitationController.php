@@ -133,6 +133,15 @@ class InvitationController extends Controller
                         $existingUser->is_verified = true;
                         $existingUser->email_verified_at = now();
                         $existingUser->save();
+                        $existingUser->refresh();
+                        
+                        // Log pour déboguer
+                        \Log::info('Utilisateur existant vérifié', [
+                            'user_id' => $existingUser->id,
+                            'email' => $existingUser->email,
+                            'is_verified' => $existingUser->is_verified,
+                            'isVerified_method' => $existingUser->isVerified(),
+                        ]);
                     }
                     
                     $company->users()->attach($existingUser->id, [
@@ -152,6 +161,19 @@ class InvitationController extends Controller
                     'password' => Hash::make($validated['password']),
                     'is_verified' => true, // L'utilisateur créé directement est automatiquement vérifié
                     'email_verified_at' => now(), // Email vérifié automatiquement
+                ]);
+                
+                // S'assurer que la valeur est bien sauvegardée (rafraîchir depuis la DB)
+                $newUser->refresh();
+                
+                // Log pour déboguer
+                \Log::info('Utilisateur créé directement', [
+                    'user_id' => $newUser->id,
+                    'email' => $newUser->email,
+                    'is_verified' => $newUser->is_verified,
+                    'is_verified_type' => gettype($newUser->is_verified),
+                    'email_verified_at' => $newUser->email_verified_at,
+                    'isVerified_method' => $newUser->isVerified(),
                 ]);
 
                 // Ajouter l'utilisateur à l'entreprise

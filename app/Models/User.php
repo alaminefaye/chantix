@@ -290,6 +290,20 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function isVerified()
     {
-        return $this->is_verified === true || $this->isSuperAdmin();
+        // Super admin est toujours vérifié
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+        
+        // Vérifier is_verified (peut être true, 1, ou '1' selon le contexte)
+        $isVerified = $this->is_verified === true 
+                   || $this->is_verified === 1 
+                   || $this->is_verified === '1'
+                   || (bool) $this->is_verified === true;
+        
+        // Aussi vérifier email_verified_at pour être sûr
+        $hasEmailVerified = $this->email_verified_at !== null;
+        
+        return $isVerified || $hasEmailVerified;
     }
 }
