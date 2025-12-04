@@ -17,7 +17,7 @@
 
           <div class="mb-3">
             <div class="form-check form-switch mb-3">
-              <input class="form-check-input" type="checkbox" id="create_directly" name="create_directly" value="1" {{ old('create_directly') ? 'checked' : '' }}>
+              <input class="form-check-input" type="checkbox" id="create_directly" name="create_directly" value="1" {{ old('create_directly', true) ? 'checked' : '' }}>
               <label class="form-check-label fw-semibold" for="create_directly">
                 Créer directement l'utilisateur (sans invitation par email)
               </label>
