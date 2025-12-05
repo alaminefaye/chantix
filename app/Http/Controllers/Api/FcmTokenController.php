@@ -16,6 +16,12 @@ class FcmTokenController extends Controller
     public function store(Request $request)
     {
         $user = Auth::user();
+        
+        \Log::info('FCM Token registration attempt', [
+            'user_id' => $user->id,
+            'user_email' => $user->email,
+            'request_data' => $request->all(),
+        ]);
 
         $validator = Validator::make($request->all(), [
             'token' => 'required|string',
@@ -72,6 +78,11 @@ class FcmTokenController extends Controller
             'device_name' => $request->device_name,
             'is_active' => true,
             'last_used_at' => now(),
+        ]);
+
+        \Log::info('FCM Token created successfully', [
+            'fcm_token_id' => $fcmToken->id,
+            'user_id' => $user->id,
         ]);
 
         return response()->json([
