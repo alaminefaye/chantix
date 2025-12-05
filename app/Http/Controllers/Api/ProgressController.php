@@ -189,15 +189,15 @@ class ProgressController extends Controller
             }
         }
 
-        // Formater la réponse
+        // Formater la réponse avec conversion explicite des types
         $formattedUpdate = [
-            'id' => $update->id,
-            'project_id' => $update->project_id,
-            'user_id' => $update->user_id,
-            'progress' => $update->progress_percentage,
+            'id' => (int)$update->id,
+            'project_id' => (int)$update->project_id,
+            'user_id' => (int)$update->user_id,
+            'progress' => (int)$update->progress_percentage,
             'description' => $update->description,
-            'latitude' => $update->latitude ? (float)$update->latitude : null,
-            'longitude' => $update->longitude ? (float)$update->longitude : null,
+            'latitude' => $update->latitude !== null ? (float)$update->latitude : null,
+            'longitude' => $update->longitude !== null ? (float)$update->longitude : null,
             'photos' => !empty($formattedPhotos) ? $formattedPhotos : null,
             'videos' => !empty($formattedVideos) ? $formattedVideos : null,
             'audio_report' => $update->audio_file ? Storage::url($update->audio_file) : null,
