@@ -116,12 +116,9 @@ class ProgressUpdateController extends Controller
             abort(403, 'Vous n\'avez pas accès à ce projet.');
         }
         
-        // Vérifier que la mise à jour appartient au projet
-        if ($progressUpdate->project_id !== $project->id) {
-            abort(403, 'Cette mise à jour n\'appartient pas à ce projet.');
-        }
-
-        $progressUpdate->load('user');
+        // Récupérer la mise à jour directement depuis la relation du projet
+        // Cela garantit qu'elle appartient bien au projet (sinon 404)
+        $progressUpdate = $project->progressUpdates()->with('user')->findOrFail($progressUpdate->id);
 
         return view('progress.show', compact('project', 'progressUpdate'));
     }
@@ -138,10 +135,9 @@ class ProgressUpdateController extends Controller
             abort(403, 'Vous n\'avez pas accès à ce projet.');
         }
         
-        // Vérifier que la mise à jour appartient au projet
-        if ($progressUpdate->project_id !== $project->id) {
-            abort(403, 'Cette mise à jour n\'appartient pas à ce projet.');
-        }
+        // Récupérer la mise à jour directement depuis la relation du projet
+        // Cela garantit qu'elle appartient bien au projet (sinon 404)
+        $progressUpdate = $project->progressUpdates()->findOrFail($progressUpdate->id);
         
         // Vérifier les permissions : l'utilisateur peut supprimer si :
         // - Il est le créateur de la mise à jour
@@ -154,7 +150,14 @@ class ProgressUpdateController extends Controller
             || $user->hasPermission('progress.update', $project->company_id);
         
         if (!$canDelete) {
-            abort(403, 'Vous n\'avez pas la permission de supprimer cette mise à jour.');
+            \Log::warning('Tentative de suppression sans permission', [
+                'user_id' => $user->id,
+                'progress_update_user_id' => $progressUpdate->user_id,
+                'project_id' => $project->id,
+                'progress_update_id' => $progressUpdate->id,
+            ]);
+            
+            abort(403, 'Vous n\'avez pas la permission de supprimer cette mise à jour. Seul le créateur, un admin ou un utilisateur avec la permission progress.update peut la supprimer.');
         }
 
         // Supprimer les fichiers
