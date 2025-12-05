@@ -122,15 +122,37 @@ class PushNotificationService
             $chunks = array_chunk($tokens, 500);
             
             foreach ($chunks as $chunk) {
-                $multicast = $this->messaging->sendMulticast($message, $chunk);
-                
-                // Traiter les résultats
-                foreach ($multicast->getResponses() as $index => $response) {
-                    if ($response->isSuccess()) {
-                        $results[] = $chunk[$index];
-                    } else {
-                        $invalidTokens[] = $chunk[$index];
-                        Log::warning("Failed to send notification to token: " . $chunk[$index] . " - " . $response->error());
+                try {
+                    $multicast = $this->messaging->sendMulticast($message, $chunk);
+                    
+                    // Obtenir les succès et échecs
+                    $successes = $multicast->successes();
+                    $failures = $multicast->failures();
+                    
+                    // Traiter les succès
+                    foreach ($successes as $success) {
+                        $token = $success->target()->value();
+                        $results[] = $token;
+                    }
+                    
+                    // Traiter les échecs
+                    foreach ($failures as $failure) {
+                        $token = $failure->target()->value();
+                        $invalidTokens[] = $token;
+                        $error = $failure->error();
+                        Log::warning("Failed to send notification to token: {$token} - {$error->getMessage()}");
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Error sending multicast: ' . $e->getMessage());
+                    // En cas d'erreur, essayer d'envoyer individuellement
+                    foreach ($chunk as $token) {
+                        try {
+                            $this->messaging->send($message->withChangedTarget('token', $token));
+                            $results[] = $token;
+                        } catch (\Exception $tokenError) {
+                            $invalidTokens[] = $token;
+                            Log::warning("Failed to send notification to token: {$token} - {$tokenError->getMessage()}");
+                        }
                     }
                 }
             }
