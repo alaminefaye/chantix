@@ -198,7 +198,9 @@
                   <td class="border-bottom-0">
                     <div class="d-flex align-items-center gap-2">
                       <a href="{{ route('projects.show', $project) }}" class="btn btn-sm btn-info">Voir</a>
-                      <a href="{{ route('projects.edit', $project) }}" class="btn btn-sm btn-warning">Modifier</a>
+                      @if(auth()->user()->isSuperAdmin() || auth()->user()->hasRoleInCompany('admin', $project->company_id) || auth()->user()->hasPermission('projects.update', $project->company_id))
+                        <a href="{{ route('projects.edit', $project) }}" class="btn btn-sm btn-warning">Modifier</a>
+                      @endif
                     </div>
                   </td>
                 </tr>
