@@ -113,5 +113,12 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
         Route::get('/reports/{report}', [\App\Http\Controllers\Api\ReportController::class, 'show']);
         Route::delete('/reports/{report}', [\App\Http\Controllers\Api\ReportController::class, 'destroy']);
     });
+    
+    // Tokens FCM pour les notifications push
+    Route::prefix('fcm-tokens')->group(function () {
+        Route::post('/', [\App\Http\Controllers\Api\FcmTokenController::class, 'store']);
+        Route::get('/', [\App\Http\Controllers\Api\FcmTokenController::class, 'index']);
+        Route::delete('/', [\App\Http\Controllers\Api\FcmTokenController::class, 'destroy']);
+    });
 });
 

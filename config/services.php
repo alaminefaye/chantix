@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'firebase' => [
+        'credentials_path' => env('FIREBASE_CREDENTIALS_PATH', storage_path('app/private/chantix-1334d-f9ec61331442.json')),
+    ],
+
 ];

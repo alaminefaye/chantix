@@ -227,6 +227,22 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Les tokens FCM de l'utilisateur
+     */
+    public function fcmTokens()
+    {
+        return $this->hasMany(FcmToken::class);
+    }
+
+    /**
+     * Les tokens FCM actifs de l'utilisateur
+     */
+    public function activeFcmTokens()
+    {
+        return $this->fcmTokens()->where('is_active', true);
+    }
+
+    /**
      * Les notifications non lues
      */
     public function unreadNotifications()
