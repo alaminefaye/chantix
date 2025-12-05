@@ -121,13 +121,11 @@ class AuthController extends Controller
         $user->current_company_id = $company->id;
         $user->save();
 
-        // Créer un token Sanctum
-        $token = $user->createToken('mobile-app')->plainTextToken;
-
+        // Ne pas créer de token si l'utilisateur n'est pas vérifié
+        // L'utilisateur devra attendre la validation avant de pouvoir se connecter
         return response()->json([
             'success' => true,
-            'message' => 'Votre compte a été créé avec succès. Il sera activé après validation par l\'administrateur.',
-            'token' => $token,
+            'message' => 'Votre compte a été créé avec succès. Il sera activé après validation par l\'administrateur. Vous recevrez un email une fois votre compte validé.',
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,

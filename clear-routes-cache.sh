@@ -26,3 +26,4 @@ echo "  php artisan config:clear"
 echo "  php artisan cache:clear"
 
 
+
