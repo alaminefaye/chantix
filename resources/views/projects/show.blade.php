@@ -158,9 +158,11 @@
 
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h6 class="fw-semibold mb-0">Matériaux du projet</h6>
-          <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addMaterialModal">
-            <i class="ti ti-plus me-1"></i>Ajouter un matériau
-          </button>
+          @if(auth()->user()->isSuperAdmin() || auth()->user()->hasRoleInCompany('admin', $project->company_id) || auth()->user()->hasPermission('materials.manage', $project->company_id))
+            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addMaterialModal">
+              <i class="ti ti-plus me-1"></i>Ajouter un matériau
+            </button>
+          @endif
         </div>
 
         @if($project->materials->count() > 0)
@@ -229,16 +231,18 @@
                       </span>
                     </td>
                     <td class="border-bottom-0">
-                      <div class="d-flex gap-2">
-                        @if($pivot->quantity_remaining > 0)
-                          <a href="{{ route('projects.materials.transfer', ['project' => $project, 'material' => $material]) }}" class="btn btn-sm btn-info" title="Transférer vers un autre projet">
-                            <i class="ti ti-arrow-right"></i>
-                          </a>
-                        @endif
-                        <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#updateMaterialModal{{ $material->id }}">
-                          <i class="ti ti-edit"></i>
-                        </button>
-                      </div>
+                      @if(auth()->user()->isSuperAdmin() || auth()->user()->hasRoleInCompany('admin', $project->company_id) || auth()->user()->hasPermission('materials.manage', $project->company_id))
+                        <div class="d-flex gap-2">
+                          @if($pivot->quantity_remaining > 0)
+                            <a href="{{ route('projects.materials.transfer', ['project' => $project, 'material' => $material]) }}" class="btn btn-sm btn-info" title="Transférer vers un autre projet">
+                              <i class="ti ti-arrow-right"></i>
+                            </a>
+                          @endif
+                          <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#updateMaterialModal{{ $material->id }}">
+                            <i class="ti ti-edit"></i>
+                          </button>
+                        </div>
+                      @endif
                     </td>
                   </tr>
                 @endforeach
@@ -254,9 +258,11 @@
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h6 class="fw-semibold mb-0">Employés affectés</h6>
           <div class="d-flex gap-2">
-            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#assignEmployeeModal">
-              <i class="ti ti-plus me-1"></i>Affecter un employé
-            </button>
+            @if(auth()->user()->isSuperAdmin() || auth()->user()->hasRoleInCompany('admin', $project->company_id) || auth()->user()->hasPermission('projects.manage_team', $project->company_id))
+              <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#assignEmployeeModal">
+                <i class="ti ti-plus me-1"></i>Affecter un employé
+              </button>
+            @endif
             <a href="{{ route('attendances.index', $project) }}" class="btn btn-sm btn-info">
               <i class="ti ti-clock me-1"></i>Pointage
             </a>
@@ -314,12 +320,14 @@
                     </td>
                     <td class="border-bottom-0">
                       @if($employee->pivot->is_active)
-                        <form action="{{ route('projects.employees.remove', ['project' => $project, 'employee' => $employee]) }}" method="POST" onsubmit="return confirm('Retirer cet employé du projet ?');" class="d-inline">
-                          @csrf
-                          <button type="submit" class="btn btn-sm btn-danger">
-                            <i class="ti ti-user-minus"></i>
-                          </button>
-                        </form>
+                        @if(auth()->user()->isSuperAdmin() || auth()->user()->hasRoleInCompany('admin', $project->company_id) || auth()->user()->hasPermission('projects.manage_team', $project->company_id))
+                          <form action="{{ route('projects.employees.remove', ['project' => $project, 'employee' => $employee]) }}" method="POST" onsubmit="return confirm('Retirer cet employé du projet ?');" class="d-inline">
+                            @csrf
+                            <button type="submit" class="btn btn-sm btn-danger">
+                              <i class="ti ti-user-minus"></i>
+                            </button>
+                          </form>
+                        @endif
                       @endif
                     </td>
                   </tr>
@@ -395,21 +403,29 @@
           <a href="{{ route('projects.gallery', $project) }}" class="btn btn-outline-info">
             <i class="ti ti-photo me-2"></i>Galerie
           </a>
-          <a href="{{ route('progress.index', $project) }}" class="btn btn-primary">
-            <i class="ti ti-progress me-2"></i>Mises à jour
-          </a>
-          <a href="{{ route('tasks.index', $project) }}" class="btn btn-success">
-            <i class="ti ti-checklist me-2"></i>Tâches
-          </a>
-          <a href="{{ route('expenses.index', $project) }}" class="btn btn-info">
-            <i class="ti ti-currency-euro me-2"></i>Dépenses
-          </a>
+          @if(auth()->user()->isSuperAdmin() || auth()->user()->hasRoleInCompany('admin', $project->company_id) || auth()->user()->hasPermission('progress.view', $project->company_id) || auth()->user()->hasPermission('progress.update', $project->company_id))
+            <a href="{{ route('progress.index', $project) }}" class="btn btn-primary">
+              <i class="ti ti-progress me-2"></i>Mises à jour
+            </a>
+          @endif
+          @if(auth()->user()->isSuperAdmin() || auth()->user()->hasRoleInCompany('admin', $project->company_id) || auth()->user()->hasPermission('tasks.view', $project->company_id) || auth()->user()->hasPermission('tasks.manage', $project->company_id))
+            <a href="{{ route('tasks.index', $project) }}" class="btn btn-success">
+              <i class="ti ti-checklist me-2"></i>Tâches
+            </a>
+          @endif
+          @if(auth()->user()->isSuperAdmin() || auth()->user()->hasRoleInCompany('admin', $project->company_id) || auth()->user()->hasPermission('expenses.view', $project->company_id))
+            <a href="{{ route('expenses.index', $project) }}" class="btn btn-info">
+              <i class="ti ti-currency-euro me-2"></i>Dépenses
+            </a>
+          @endif
           <a href="{{ route('attendances.index', $project) }}" class="btn btn-warning">
             <i class="ti ti-clock me-2"></i>Pointage
           </a>
-          <a href="{{ route('reports.index', $project) }}" class="btn btn-secondary">
-            <i class="ti ti-file-text me-2"></i>Rapports
-          </a>
+          @if(auth()->user()->isSuperAdmin() || auth()->user()->hasRoleInCompany('admin', $project->company_id) || auth()->user()->hasPermission('reports.view', $project->company_id) || auth()->user()->hasPermission('reports.generate', $project->company_id))
+            <a href="{{ route('reports.index', $project) }}" class="btn btn-secondary">
+              <i class="ti ti-file-text me-2"></i>Rapports
+            </a>
+          @endif
           <a href="{{ route('comments.index', $project) }}" class="btn btn-dark">
             <i class="ti ti-message-circle me-2"></i>Chat
           </a>
