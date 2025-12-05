@@ -113,6 +113,9 @@ class ProgressController extends Controller
             'description' => 'nullable|string',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
+            'photos.*' => 'nullable|image|max:5120', // 5MB max
+            'videos.*' => 'nullable|mimes:mp4,avi,mov|max:51200', // 50MB max
+            'audio_report' => 'nullable|file|mimes:mp3,m4a,wav|max:10240', // 10MB max
         ]);
 
         if ($validator->fails()) {
@@ -123,26 +126,68 @@ class ProgressController extends Controller
             ], 422);
         }
 
-        // TODO: Gérer l'upload de photos, vidéos et audio
-        // Pour l'instant, on crée seulement avec les données texte
+        // Gérer l'upload de photos
+        $photos = [];
+        if ($request->hasFile('photos')) {
+            foreach ($request->file('photos') as $photo) {
+                $path = $photo->store('progress/photos', 'public');
+                $photos[] = $path;
+            }
+        }
+
+        // Gérer l'upload de vidéos
+        $videos = [];
+        if ($request->hasFile('videos')) {
+            foreach ($request->file('videos') as $video) {
+                $path = $video->store('progress/videos', 'public');
+                $videos[] = $path;
+            }
+        }
+
+        // Gérer l'upload de l'audio
+        $audioFile = null;
+        if ($request->hasFile('audio_report')) {
+            $audioFile = $request->file('audio_report')->store('progress/audio', 'public');
+        }
+
+        // S'assurer que progress est un entier
+        $progress = (int)$request->progress;
 
         $update = ProgressUpdate::create([
             'project_id' => $projectId,
             'user_id' => $user->id,
-            'progress_percentage' => $request->progress,
+            'progress_percentage' => $progress,
             'description' => $request->description,
-            'latitude' => $request->latitude,
-            'longitude' => $request->longitude,
+            'latitude' => $request->latitude ? (float)$request->latitude : null,
+            'longitude' => $request->longitude ? (float)$request->longitude : null,
+            'photos' => !empty($photos) ? $photos : null,
+            'videos' => !empty($videos) ? $videos : null,
+            'audio_file' => $audioFile,
         ]);
 
         // Mettre à jour le pourcentage d'avancement du projet
-        $project->progress = $request->progress;
-        if ($request->progress == 100) {
+        $project->progress = $progress;
+        if ($progress == 100) {
             $project->status = 'termine';
-        } elseif ($request->progress > 0 && $project->status == 'non_demarre') {
+        } elseif ($progress > 0 && $project->status == 'non_demarre') {
             $project->status = 'en_cours';
         }
         $project->save();
+
+        // Formater les photos et vidéos pour la réponse
+        $formattedPhotos = [];
+        if ($update->photos) {
+            foreach ($update->photos as $photo) {
+                $formattedPhotos[] = Storage::url($photo);
+            }
+        }
+
+        $formattedVideos = [];
+        if ($update->videos) {
+            foreach ($update->videos as $video) {
+                $formattedVideos[] = Storage::url($video);
+            }
+        }
 
         // Formater la réponse
         $formattedUpdate = [
@@ -153,6 +198,9 @@ class ProgressController extends Controller
             'description' => $update->description,
             'latitude' => $update->latitude ? (float)$update->latitude : null,
             'longitude' => $update->longitude ? (float)$update->longitude : null,
+            'photos' => !empty($formattedPhotos) ? $formattedPhotos : null,
+            'videos' => !empty($formattedVideos) ? $formattedVideos : null,
+            'audio_report' => $update->audio_file ? Storage::url($update->audio_file) : null,
             'created_at' => $update->created_at->toIso8601String(),
             'updated_at' => $update->updated_at->toIso8601String(),
         ];
