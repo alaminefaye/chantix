@@ -111,8 +111,14 @@ class ProgressUpdateController extends Controller
     {
         $user = Auth::user();
         
-        if ($project->company_id !== $user->current_company_id || $progressUpdate->project_id !== $project->id) {
-            abort(403);
+        // Vérifier que le projet appartient à l'entreprise de l'utilisateur
+        if ($project->company_id !== $user->current_company_id) {
+            abort(403, 'Vous n\'avez pas accès à ce projet.');
+        }
+        
+        // Vérifier que la mise à jour appartient au projet
+        if ($progressUpdate->project_id !== $project->id) {
+            abort(403, 'Cette mise à jour n\'appartient pas à ce projet.');
         }
 
         $progressUpdate->load('user');
@@ -127,8 +133,28 @@ class ProgressUpdateController extends Controller
     {
         $user = Auth::user();
         
-        if ($project->company_id !== $user->current_company_id || $progressUpdate->project_id !== $project->id) {
-            abort(403);
+        // Vérifier que le projet appartient à l'entreprise de l'utilisateur
+        if ($project->company_id !== $user->current_company_id) {
+            abort(403, 'Vous n\'avez pas accès à ce projet.');
+        }
+        
+        // Vérifier que la mise à jour appartient au projet
+        if ($progressUpdate->project_id !== $project->id) {
+            abort(403, 'Cette mise à jour n\'appartient pas à ce projet.');
+        }
+        
+        // Vérifier les permissions : l'utilisateur peut supprimer si :
+        // - Il est le créateur de la mise à jour
+        // - Il est super admin
+        // - Il est admin de l'entreprise
+        // - Il a la permission progress.update
+        $canDelete = $progressUpdate->user_id == $user->id
+            || $user->isSuperAdmin()
+            || $user->hasRoleInCompany('admin', $project->company_id)
+            || $user->hasPermission('progress.update', $project->company_id);
+        
+        if (!$canDelete) {
+            abort(403, 'Vous n\'avez pas la permission de supprimer cette mise à jour.');
         }
 
         // Supprimer les fichiers
@@ -141,6 +167,10 @@ class ProgressUpdateController extends Controller
             foreach ($progressUpdate->videos as $video) {
                 Storage::disk('public')->delete($video);
             }
+        }
+        
+        if ($progressUpdate->audio_file) {
+            Storage::disk('public')->delete($progressUpdate->audio_file);
         }
 
         $progressUpdate->delete();

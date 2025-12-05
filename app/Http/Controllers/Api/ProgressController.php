@@ -247,6 +247,23 @@ class ProgressController extends Controller
             ], 404);
         }
 
+        // Vérifier les permissions : l'utilisateur peut supprimer si :
+        // - Il est le créateur de la mise à jour
+        // - Il est super admin
+        // - Il est admin de l'entreprise
+        // - Il a la permission progress.update
+        $canDelete = $update->user_id == $user->id
+            || $user->isSuperAdmin()
+            || $user->hasRoleInCompany('admin', $companyId)
+            || $user->hasPermission('progress.update', $companyId);
+        
+        if (!$canDelete) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Vous n\'avez pas la permission de supprimer cette mise à jour.',
+            ], 403);
+        }
+
         // Supprimer les fichiers associés
         if ($update->photos) {
             foreach ($update->photos as $photo) {
