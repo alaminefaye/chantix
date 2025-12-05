@@ -90,6 +90,11 @@ class ProjectController extends Controller
                 ->with('error', 'Veuillez sélectionner une entreprise.');
         }
 
+        // Vérifier les permissions : seuls admin et chef_chantier peuvent créer des projets
+        if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $companyId) && !$user->hasPermission('projects.create', $companyId)) {
+            abort(403, 'Vous n\'avez pas la permission de créer des projets.');
+        }
+
         return view('projects.create');
     }
 
@@ -104,6 +109,11 @@ class ProjectController extends Controller
         if (!$companyId) {
             return redirect()->route('companies.index')
                 ->with('error', 'Veuillez sélectionner une entreprise.');
+        }
+
+        // Vérifier les permissions : seuls admin et chef_chantier peuvent créer des projets
+        if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $companyId) && !$user->hasPermission('projects.create', $companyId)) {
+            abort(403, 'Vous n\'avez pas la permission de créer des projets.');
         }
 
         $request->validate([
@@ -317,6 +327,11 @@ class ProjectController extends Controller
             abort(403);
         }
 
+        // Vérifier les permissions : seuls admin et chef_chantier peuvent modifier des projets
+        if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $project->company_id) && !$user->hasPermission('projects.update', $project->company_id)) {
+            abort(403, 'Vous n\'avez pas la permission de modifier ce projet.');
+        }
+
         return view('projects.edit', compact('project'));
     }
 
@@ -329,6 +344,11 @@ class ProjectController extends Controller
         
         if ($project->company_id !== $user->current_company_id) {
             abort(403);
+        }
+
+        // Vérifier les permissions : seuls admin et chef_chantier peuvent modifier des projets
+        if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $project->company_id) && !$user->hasPermission('projects.update', $project->company_id)) {
+            abort(403, 'Vous n\'avez pas la permission de modifier ce projet.');
         }
 
         $request->validate([

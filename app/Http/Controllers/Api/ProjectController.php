@@ -106,6 +106,14 @@ class ProjectController extends Controller
             ], 400);
         }
 
+        // Vérifier les permissions : seuls admin et chef_chantier peuvent créer des projets
+        if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $companyId) && !$user->hasPermission('projects.create', $companyId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Vous n\'avez pas la permission de créer des projets.',
+            ], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -173,6 +181,14 @@ class ProjectController extends Controller
                 'success' => false,
                 'message' => 'Projet non trouvé.',
             ], 404);
+        }
+
+        // Vérifier les permissions : seuls admin et chef_chantier peuvent modifier des projets
+        if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $companyId) && !$user->hasPermission('projects.update', $companyId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Vous n\'avez pas la permission de modifier ce projet.',
+            ], 403);
         }
 
         $validator = Validator::make($request->all(), [
