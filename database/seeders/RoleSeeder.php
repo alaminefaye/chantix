@@ -84,6 +84,17 @@ class RoleSeeder extends Seeder
                     'dashboard.view',
                 ],
             ],
+            [
+                'name' => 'client',
+                'display_name' => 'Client',
+                'description' => 'Accès limité pour consulter les projets',
+                'permissions' => [
+                    'projects.view',
+                    'progress.view',
+                    'reports.view',
+                    'dashboard.view',
+                ],
+            ],
         ];
 
         foreach ($roles as $role) {

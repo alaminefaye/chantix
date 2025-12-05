@@ -193,9 +193,14 @@ class User extends Authenticatable implements MustVerifyEmail
         switch ($role->name) {
             case 'chef_chantier':
                 return in_array('projects.' . $action, $permissions) || in_array('*', $permissions);
-            case 'ingenieur':
             case 'superviseur':
+                // Le superviseur peut voir et valider, mais pas créer ni modifier
+                return ($action === 'view' || $action === 'validate') && in_array('projects.view', $permissions);
+            case 'ingenieur':
                 return $action === 'view' || in_array('projects.view', $permissions);
+            case 'client':
+                // Le client peut seulement voir les projets (lecture seule)
+                return $action === 'view' && in_array('projects.view', $permissions);
             case 'ouvrier':
                 return $action === 'view' && in_array('projects.view', $permissions);
             case 'comptable':
