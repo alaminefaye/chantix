@@ -12,9 +12,11 @@
           <div class="d-flex gap-2">
             <a href="{{ route('tasks.index', ['project' => $project, 'view' => 'calendar']) }}" class="btn btn-sm btn-outline-primary">Calendrier</a>
             <a href="{{ route('tasks.index', ['project' => $project, 'view' => 'kanban']) }}" class="btn btn-sm btn-outline-primary">Kanban</a>
-            <a href="{{ route('tasks.create', $project) }}" class="btn btn-primary">
-              <i class="ti ti-plus me-2"></i>Nouvelle tâche
-            </a>
+            @if(auth()->user()->isSuperAdmin() || auth()->user()->hasRoleInCompany('admin', $project->company_id) || auth()->user()->hasPermission('tasks.manage', $project->company_id))
+              <a href="{{ route('tasks.create', $project) }}" class="btn btn-primary">
+                <i class="ti ti-plus me-2"></i>Nouvelle tâche
+              </a>
+            @endif
             <a href="{{ route('projects.show', $project) }}" class="btn btn-secondary">Retour</a>
           </div>
         </div>
@@ -192,14 +194,16 @@
                   <td class="border-bottom-0">
                     <div class="d-flex align-items-center gap-2">
                       <a href="{{ route('tasks.show', ['project' => $project, 'task' => $task]) }}" class="btn btn-sm btn-info">Voir</a>
-                      <a href="{{ route('tasks.edit', ['project' => $project, 'task' => $task]) }}" class="btn btn-sm btn-warning">Modifier</a>
+                      @if(auth()->user()->isSuperAdmin() || auth()->user()->hasRoleInCompany('admin', $project->company_id) || auth()->user()->hasPermission('tasks.manage', $project->company_id))
+                        <a href="{{ route('tasks.edit', ['project' => $project, 'task' => $task]) }}" class="btn btn-sm btn-warning">Modifier</a>
+                      @endif
                     </div>
                   </td>
                 </tr>
               @empty
                 <tr>
                   <td colspan="8" class="text-center py-4">
-                    <p class="mb-0">Aucune tâche trouvée. <a href="{{ route('tasks.create', $project) }}">Créer une tâche</a></p>
+                    <p class="mb-0">Aucune tâche trouvée.@if(auth()->user()->isSuperAdmin() || auth()->user()->hasRoleInCompany('admin', $project->company_id) || auth()->user()->hasPermission('tasks.manage', $project->company_id)) <a href="{{ route('tasks.create', $project) }}">Créer une tâche</a>@endif</p>
                   </td>
                 </tr>
               @endforelse

@@ -18,12 +18,14 @@
             @endif
           </div>
           <div class="d-flex gap-2">
-            <a href="{{ route('materials.import') }}" class="btn btn-info">
-              <i class="ti ti-upload me-2"></i>Importer Excel
-            </a>
-            <a href="{{ route('materials.create') }}" class="btn btn-primary">
-              <i class="ti ti-plus me-2"></i>Ajouter un matériau
-            </a>
+            @if(auth()->user()->isSuperAdmin() || auth()->user()->hasRoleInCompany('admin', auth()->user()->current_company_id) || auth()->user()->hasPermission('materials.manage', auth()->user()->current_company_id))
+              <a href="{{ route('materials.import') }}" class="btn btn-info">
+                <i class="ti ti-upload me-2"></i>Importer Excel
+              </a>
+              <a href="{{ route('materials.create') }}" class="btn btn-primary">
+                <i class="ti ti-plus me-2"></i>Ajouter un matériau
+              </a>
+            @endif
           </div>
         </div>
 
@@ -117,14 +119,16 @@
                   <td class="border-bottom-0">
                     <div class="d-flex align-items-center gap-2">
                       <a href="{{ route('materials.show', $material) }}" class="btn btn-sm btn-info">Voir</a>
-                      <a href="{{ route('materials.edit', $material) }}" class="btn btn-sm btn-warning">Modifier</a>
+                      @if(auth()->user()->isSuperAdmin() || auth()->user()->hasRoleInCompany('admin', $material->company_id) || auth()->user()->hasPermission('materials.manage', $material->company_id))
+                        <a href="{{ route('materials.edit', $material) }}" class="btn btn-sm btn-warning">Modifier</a>
+                      @endif
                     </div>
                   </td>
                 </tr>
               @empty
                 <tr>
                   <td colspan="7" class="text-center py-4">
-                    <p class="mb-0">Aucun matériau trouvé. <a href="{{ route('materials.create') }}">Ajouter un matériau</a></p>
+                    <p class="mb-0">Aucun matériau trouvé.@if(auth()->user()->isSuperAdmin() || auth()->user()->hasRoleInCompany('admin', auth()->user()->current_company_id) || auth()->user()->hasPermission('materials.manage', auth()->user()->current_company_id)) <a href="{{ route('materials.create') }}">Ajouter un matériau</a>@endif</p>
                   </td>
                 </tr>
               @endforelse

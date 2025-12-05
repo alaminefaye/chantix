@@ -81,7 +81,7 @@
           @endif
         </div>
 
-        @if(auth()->id() == $progressUpdate->user_id || auth()->user()->hasRoleInCompany('admin') || auth()->user()->hasRoleInCompany('chef_chantier'))
+        @if(auth()->id() == $progressUpdate->user_id || auth()->user()->isSuperAdmin() || auth()->user()->hasRoleInCompany('admin', $project->company_id) || auth()->user()->hasPermission('progress.update', $project->company_id))
           <div class="d-flex gap-2">
             <form action="{{ route('progress.destroy', [$project, $progressUpdate]) }}" method="POST" 
                   onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette mise à jour ?');">

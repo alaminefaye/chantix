@@ -13,9 +13,11 @@
             <p class="text-muted mb-0">Projet: <strong>{{ $project->name }}</strong></p>
           </div>
           <div class="d-flex gap-2">
-            <a href="{{ route('progress.create', $project) }}" class="btn btn-primary">
-              <i class="ti ti-plus me-2"></i>Nouvelle mise à jour
-            </a>
+            @if(auth()->user()->isSuperAdmin() || auth()->user()->hasRoleInCompany('admin', $project->company_id) || auth()->user()->hasPermission('progress.update', $project->company_id))
+              <a href="{{ route('progress.create', $project) }}" class="btn btn-primary">
+                <i class="ti ti-plus me-2"></i>Nouvelle mise à jour
+              </a>
+            @endif
             <a href="{{ route('projects.show', $project) }}" class="btn btn-secondary">Retour au projet</a>
           </div>
         </div>
@@ -85,7 +87,7 @@
 
               <div class="d-flex gap-2">
                 <a href="{{ route('progress.show', [$project, $update]) }}" class="btn btn-sm btn-info">Voir détails</a>
-                @if(auth()->id() == $update->user_id || auth()->user()->hasRoleInCompany('admin') || auth()->user()->hasRoleInCompany('chef_chantier'))
+                @if(auth()->id() == $update->user_id || auth()->user()->isSuperAdmin() || auth()->user()->hasRoleInCompany('admin', $project->company_id) || auth()->user()->hasPermission('progress.update', $project->company_id))
                   <form action="{{ route('progress.destroy', [$project, $update]) }}" method="POST" class="d-inline" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette mise à jour ?');">
                     @csrf
                     @method('DELETE')
@@ -99,7 +101,9 @@
           <div class="text-center py-5">
             <i class="ti ti-inbox fs-1 text-muted mb-3"></i>
             <p class="text-muted">Aucune mise à jour d'avancement pour ce projet.</p>
-            <a href="{{ route('progress.create', $project) }}" class="btn btn-primary">Créer la première mise à jour</a>
+            @if(auth()->user()->isSuperAdmin() || auth()->user()->hasRoleInCompany('admin', $project->company_id) || auth()->user()->hasPermission('progress.update', $project->company_id))
+              <a href="{{ route('progress.create', $project) }}" class="btn btn-primary">Créer la première mise à jour</a>
+            @endif
           </div>
         @endforelse
 

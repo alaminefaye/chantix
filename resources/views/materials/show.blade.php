@@ -10,9 +10,11 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
           <h5 class="card-title fw-semibold mb-0">{{ $material->name }}</h5>
           <div class="d-flex gap-2">
-            <a href="{{ route('materials.edit', $material) }}" class="btn btn-warning">
-              <i class="ti ti-edit me-2"></i>Modifier
-            </a>
+            @if(auth()->user()->isSuperAdmin() || auth()->user()->hasRoleInCompany('admin', $material->company_id) || auth()->user()->hasPermission('materials.manage', $material->company_id))
+              <a href="{{ route('materials.edit', $material) }}" class="btn btn-warning">
+                <i class="ti ti-edit me-2"></i>Modifier
+              </a>
+            @endif
             <a href="{{ route('materials.index') }}" class="btn btn-secondary">Retour</a>
           </div>
         </div>
