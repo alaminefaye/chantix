@@ -260,25 +260,55 @@ class ProgressController extends Controller
             ], 403);
         }
 
-        $validator = Validator::make($request->all(), [
+        // Log pour debugging
+        \Log::info('Progress update request', [
+            'project_id' => $projectId,
+            'progress_id' => $progressId,
+            'request_data' => $request->except(['photos', 'videos', 'audio_report']),
+            'has_photos' => $request->hasFile('photos'),
+            'has_videos' => $request->hasFile('videos'),
+            'has_audio' => $request->hasFile('audio_report'),
+            'existing_photos_count' => $request->has('existing_photos') ? count($request->input('existing_photos', [])) : 0,
+            'existing_videos_count' => $request->has('existing_videos') ? count($request->input('existing_videos', [])) : 0,
+        ]);
+
+        // Préparer les données pour la validation (convertir progress en int si c'est un string)
+        $data = $request->all();
+        if (isset($data['progress'])) {
+            $data['progress'] = (int)$data['progress'];
+        }
+
+        $validator = Validator::make($data, [
             'progress' => 'required|integer|min:0|max:100',
-            'description' => 'nullable|string',
-            'latitude' => 'nullable|numeric',
-            'longitude' => 'nullable|numeric',
+            'description' => 'nullable|string|max:5000',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
             'photos.*' => 'nullable|image|max:5120',
             'videos.*' => 'nullable|mimes:mp4,avi,mov|max:51200',
             'audio_report' => 'nullable|file|mimes:mp3,m4a,wav|max:10240',
             'existing_photos' => 'nullable|array',
+            'existing_photos.*' => 'nullable|string',
             'existing_videos' => 'nullable|array',
+            'existing_videos.*' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
+            // Log des erreurs pour le debugging
+            \Log::error('Validation failed for progress update', [
+                'errors' => $validator->errors()->toArray(),
+                'request_data' => $data,
+            ]);
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Les données fournies sont invalides.',
                 'errors' => $validator->errors(),
             ], 422);
         }
+
+        // Utiliser les données validées
+        $validated = $validator->validated();
+        $progress = (int)$validated['progress'];
 
         // Gérer les photos existantes à conserver
         $photos = [];
@@ -359,15 +389,16 @@ class ProgressController extends Controller
             }
         }
 
-        // S'assurer que progress est un entier
-        $progress = (int)$request->progress;
+        // Utiliser les données validées
+        $validated = $validator->validated();
+        $progress = (int)$validated['progress'];
 
         // Mettre à jour la mise à jour
         $update->update([
             'progress_percentage' => $progress,
-            'description' => $request->description,
-            'latitude' => $request->latitude ? (float)$request->latitude : null,
-            'longitude' => $request->longitude ? (float)$request->longitude : null,
+            'description' => $validated['description'] ?? null,
+            'latitude' => isset($validated['latitude']) ? (float)$validated['latitude'] : null,
+            'longitude' => isset($validated['longitude']) ? (float)$validated['longitude'] : null,
             'photos' => !empty($photos) ? $photos : null,
             'videos' => !empty($videos) ? $videos : null,
             'audio_file' => $audioFile,
