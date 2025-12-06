@@ -20,7 +20,7 @@
       <div>
         <div class="brand-logo d-flex align-items-center justify-content-between">
           <a href="{{ route('dashboard') }}" class="text-nowrap logo-img">
-            <img src="{{ asset('assets/images/logos/dark-logo.png') }}" style="max-width: 80px; height: auto; object-fit: contain;" alt="Chantix Logo" />
+            <img src="{{ asset('assets/images/logos/logo.png') }}" style="max-width: 80px; height: auto; object-fit: contain;" alt="Chantix Logo" />
           </a>
           <div class="close-btn d-xl-none d-block sidebartoggler cursor-pointer" id="sidebarCollapse">
             <i class="ti ti-x fs-8"></i>
