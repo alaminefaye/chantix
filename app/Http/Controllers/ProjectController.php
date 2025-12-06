@@ -162,7 +162,7 @@ class ProjectController extends Controller
             abort(403);
         }
 
-        $project->load('creator', 'company', 'materials', 'employees', 'progressUpdates.user', 'tasks.creator', 'expenses.user', 'comments.user');
+        $project->load('creator', 'company', 'materials', 'employees', 'progressUpdates.user', 'tasks.creator', 'expenses.creator', 'comments.user');
         
         // Charger statusHistory seulement si la relation existe
         if (method_exists($project, 'statusHistory')) {
@@ -244,13 +244,13 @@ class ProjectController extends Controller
         }
 
         // Dépenses
-        foreach ($project->expenses()->with('user')->orderBy('created_at', 'desc')->get() as $expense) {
+        foreach ($project->expenses()->with('creator')->orderBy('created_at', 'desc')->get() as $expense) {
             $events->push([
                 'type' => 'expense',
                 'date' => $expense->created_at,
                 'title' => 'Dépense: ' . $expense->title,
                 'description' => number_format($expense->amount, 2, ',', ' ') . ' €',
-                'user' => $expense->user->name,
+                'user' => $expense->creator->name,
                 'data' => $expense,
             ]);
         }
