@@ -201,6 +201,55 @@ class PushNotificationService
 
         return $notification;
     }
+
+    /**
+     * Créer des notifications dans la base de données pour tous les utilisateurs d'une entreprise et envoyer des push
+     */
+    public function createAndSendToCompany($companyId, $type, $title, $message, $projectId = null, $data = [])
+    {
+        $userIds = User::where('current_company_id', $companyId)
+            ->orWhereHas('companies', function($query) use ($companyId) {
+                $query->where('companies.id', $companyId);
+            })
+            ->pluck('id')
+            ->toArray();
+
+        if (empty($userIds)) {
+            Log::info("No users found for company {$companyId}");
+            return [];
+        }
+
+        $notifications = [];
+        $pushData = array_merge($data, [
+            'type' => $type,
+            'project_id' => $projectId,
+        ]);
+
+        // Créer une notification en base pour chaque utilisateur
+        foreach ($userIds as $userId) {
+            $notification = NotificationModel::create([
+                'user_id' => $userId,
+                'project_id' => $projectId,
+                'type' => $type,
+                'title' => $title,
+                'message' => $message,
+                'data' => $data,
+                'is_read' => false,
+            ]);
+
+            $notifications[] = $notification;
+            
+            // Ajouter l'ID de la notification aux données push
+            $userPushData = array_merge($pushData, [
+                'notification_id' => $notification->id,
+            ]);
+        }
+
+        // Envoyer les push notifications en une seule fois (plus efficace)
+        $this->sendToUsers($userIds, $title, $message, $pushData);
+
+        return $notifications;
+    }
 }
 
 

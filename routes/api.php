@@ -55,6 +55,7 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     Route::prefix('projects/{project}')->group(function () {
         Route::get('/progress', [\App\Http\Controllers\Api\ProgressController::class, 'index']);
         Route::post('/progress', [\App\Http\Controllers\Api\ProgressController::class, 'store']);
+        Route::put('/progress/{progress}', [\App\Http\Controllers\Api\ProgressController::class, 'update']);
         Route::delete('/progress/{progress}', [\App\Http\Controllers\Api\ProgressController::class, 'destroy']);
     });
     
@@ -119,6 +120,16 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
         Route::post('/', [\App\Http\Controllers\Api\FcmTokenController::class, 'store']);
         Route::get('/', [\App\Http\Controllers\Api\FcmTokenController::class, 'index']);
         Route::delete('/', [\App\Http\Controllers\Api\FcmTokenController::class, 'destroy']);
+    });
+    
+    // Notifications
+    Route::prefix('notifications')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\NotificationController::class, 'index']);
+        Route::get('/unread-count', [\App\Http\Controllers\Api\NotificationController::class, 'unreadCount']);
+        Route::get('/latest', [\App\Http\Controllers\Api\NotificationController::class, 'latest']);
+        Route::post('/{id}/mark-read', [\App\Http\Controllers\Api\NotificationController::class, 'markAsRead']);
+        Route::post('/mark-all-read', [\App\Http\Controllers\Api\NotificationController::class, 'markAllAsRead']);
+        Route::delete('/{id}', [\App\Http\Controllers\Api\NotificationController::class, 'destroy']);
     });
 });
 

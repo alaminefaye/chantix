@@ -129,14 +129,15 @@ class MaterialController extends Controller
 
         $material = Material::create($data);
 
-        // Envoyer une notification push aux utilisateurs de l'entreprise
+        // Créer et envoyer une notification push aux utilisateurs de l'entreprise
         $pushService = new PushNotificationService();
-        $pushService->sendToCompany(
+        $pushService->createAndSendToCompany(
             $companyId,
+            'material_created',
             'Nouveau matériau ajouté',
             "Le matériau {$material->name} a été ajouté au stock.",
+            null,
             [
-                'type' => 'material_created',
                 'material_id' => $material->id,
                 'material_name' => $material->name,
             ]
@@ -208,12 +209,13 @@ class MaterialController extends Controller
             
             if ($stockChange > 0) {
                 // Stock augmenté
-                $pushService->sendToCompany(
+                $pushService->createAndSendToCompany(
                     $companyId,
+                    'material_stock_increased',
                     'Stock mis à jour',
                     "Le stock de {$material->name} a été augmenté de {$stockChange} {$material->unit}. Nouveau stock: {$newStockQuantity} {$material->unit}.",
+                    null,
                     [
-                        'type' => 'material_stock_increased',
                         'material_id' => $material->id,
                         'material_name' => $material->name,
                         'old_stock' => $oldStockQuantity,
@@ -223,12 +225,13 @@ class MaterialController extends Controller
                 );
             } else {
                 // Stock diminué
-                $pushService->sendToCompany(
+                $pushService->createAndSendToCompany(
                     $companyId,
+                    'material_stock_decreased',
                     'Stock mis à jour',
                     "Le stock de {$material->name} a été réduit de " . abs($stockChange) . " {$material->unit}. Nouveau stock: {$newStockQuantity} {$material->unit}.",
+                    null,
                     [
-                        'type' => 'material_stock_decreased',
                         'material_id' => $material->id,
                         'material_name' => $material->name,
                         'old_stock' => $oldStockQuantity,
@@ -240,12 +243,13 @@ class MaterialController extends Controller
             
             // Vérifier si le stock est faible
             if ($newStockQuantity <= $material->min_stock) {
-                $pushService->sendToCompany(
+                $pushService->createAndSendToCompany(
                     $companyId,
+                    'material_low_stock',
                     '⚠️ Stock faible',
                     "Attention: Le stock de {$material->name} est faible ({$newStockQuantity} {$material->unit}). Stock minimum: {$material->min_stock} {$material->unit}.",
+                    null,
                     [
-                        'type' => 'material_low_stock',
                         'material_id' => $material->id,
                         'material_name' => $material->name,
                         'current_stock' => $newStockQuantity,
@@ -255,12 +259,13 @@ class MaterialController extends Controller
             }
         } else {
             // Autre mise à jour (nom, description, etc.)
-            $pushService->sendToCompany(
+            $pushService->createAndSendToCompany(
                 $companyId,
+                'material_updated',
                 'Matériau mis à jour',
                 "Le matériau {$material->name} a été modifié.",
+                null,
                 [
-                    'type' => 'material_updated',
                     'material_id' => $material->id,
                     'material_name' => $material->name,
                 ]
@@ -301,14 +306,15 @@ class MaterialController extends Controller
         
         $material->delete();
 
-        // Envoyer une notification push
+        // Créer et envoyer une notification push
         $pushService = new PushNotificationService();
-        $pushService->sendToCompany(
+        $pushService->createAndSendToCompany(
             $materialCompanyId,
+            'material_deleted',
             'Matériau supprimé',
             "Le matériau {$materialName} a été supprimé du stock.",
+            null,
             [
-                'type' => 'material_deleted',
                 'material_name' => $materialName,
             ]
         );
