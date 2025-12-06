@@ -173,7 +173,7 @@
               <li class="nav-item dropdown me-3">
                 <a class="nav-link nav-icon-hover position-relative" href="javascript:void(0)" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                   <i class="ti ti-bell-ringing"></i>
-                  <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notificationBadge" style="display: none;">
+                  <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notificationBadge" style="display: none; top: -5px; right: -5px;">
                     <span id="notificationCount">0</span>
                   </span>
                 </a>
