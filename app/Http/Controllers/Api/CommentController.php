@@ -56,6 +56,14 @@ class CommentController extends Controller
 
         $comments = $query->get();
 
+        // S'assurer que les réponses sont bien chargées
+        foreach ($comments as $comment) {
+            if ($comment->replies->isEmpty()) {
+                // Recharger les réponses si elles ne sont pas chargées
+                $comment->load('replies.user');
+            }
+        }
+
         return response()->json([
             'success' => true,
             'data' => $comments,
