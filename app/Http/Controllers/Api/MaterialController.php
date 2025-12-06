@@ -123,11 +123,39 @@ class MaterialController extends Controller
             ], 422);
         }
 
-        $data = $validator->validated();
-        $data['company_id'] = $companyId;
-        $data['is_active'] = $request->input('is_active', true);
+        $data = [];
+        try {
+            $data = $validator->validated();
+            $data['company_id'] = $companyId;
+            $data['is_active'] = $request->input('is_active', true);
+            
+            // S'assurer que les valeurs par défaut sont définies
+            if (empty($data['unit'])) {
+                $data['unit'] = 'unité';
+            }
+            if (!isset($data['unit_price']) || $data['unit_price'] === null) {
+                $data['unit_price'] = 0;
+            }
+            if (!isset($data['stock_quantity']) || $data['stock_quantity'] === null) {
+                $data['stock_quantity'] = 0;
+            }
+            if (!isset($data['min_stock']) || $data['min_stock'] === null) {
+                $data['min_stock'] = 0;
+            }
 
-        $material = Material::create($data);
+            $material = Material::create($data);
+        } catch (\Exception $e) {
+            \Log::error('Erreur lors de la création du matériau: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'data' => $data,
+                'request_data' => $request->all(),
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la création du matériau: ' . $e->getMessage(),
+            ], 500);
+        }
 
         // Créer et envoyer une notification push aux utilisateurs de l'entreprise
         try {
