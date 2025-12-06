@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\ProgressUpdate;
 use App\Models\Project;
+use App\Services\PushNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -412,6 +413,48 @@ class ProgressController extends Controller
             $project->status = 'en_cours';
         }
         $project->save();
+
+        // Envoyer des notifications push aux utilisateurs concernés
+        try {
+            $pushService = new PushNotificationService();
+            $description = $validated['description'] ? substr($validated['description'], 0, 100) . '...' : 'Sans description';
+            $pushService->notifyProjectStakeholders(
+                $project,
+                'progress_updated',
+                'Mise à jour d\'avancement modifiée',
+                "Le projet \"{$project->name}\" a été mis à jour : {$progress}% d'avancement",
+                [
+                    'progress_update_id' => $update->id,
+                    'progress_percentage' => $progress,
+                    'description' => $validated['description'] ?? null,
+                ],
+                $user->id // Exclure l'utilisateur qui a modifié la mise à jour
+            );
+            \Log::info('📬 Progress update notification process completed.');
+        } catch (\Exception $e) {
+            \Log::warning("Failed to send progress update notification: " . $e->getMessage());
+        }
+
+        // Envoyer des notifications push aux utilisateurs concernés
+        try {
+            $pushService = new PushNotificationService();
+            $description = $validated['description'] ? substr($validated['description'], 0, 100) . '...' : 'Sans description';
+            $pushService->notifyProjectStakeholders(
+                $project,
+                'progress_updated',
+                'Mise à jour d\'avancement modifiée',
+                "Le projet \"{$project->name}\" a été mis à jour : {$progress}% d'avancement",
+                [
+                    'progress_update_id' => $update->id,
+                    'progress_percentage' => $progress,
+                    'description' => $validated['description'] ?? null,
+                ],
+                $user->id // Exclure l'utilisateur qui a modifié la mise à jour
+            );
+            \Log::info('📬 Progress update notification process completed.');
+        } catch (\Exception $e) {
+            \Log::warning("Failed to send progress update notification: " . $e->getMessage());
+        }
 
         // Formater les photos et vidéos pour la réponse
         $formattedPhotos = [];

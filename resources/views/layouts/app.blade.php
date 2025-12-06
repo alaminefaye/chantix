@@ -390,6 +390,8 @@
           'expense_added': 'ti-currency-euro',
           'expense_created': 'ti-currency-euro',
           'expense_updated': 'ti-currency-euro',
+          'progress_created': 'ti-progress',
+          'progress_updated': 'ti-progress',
         };
         return icons[type] || 'ti-bell';
       }

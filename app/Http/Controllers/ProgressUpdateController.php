@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ProgressUpdate;
 use App\Models\Project;
+use App\Services\PushNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -99,6 +100,27 @@ class ProgressUpdateController extends Controller
             $project->status = 'en_cours';
         }
         $project->save();
+
+        // Envoyer des notifications push aux utilisateurs concernés
+        try {
+            $pushService = new PushNotificationService();
+            $description = $request->description ? substr($request->description, 0, 100) . '...' : 'Sans description';
+            $pushService->notifyProjectStakeholders(
+                $project,
+                'progress_created',
+                'Nouvelle mise à jour d\'avancement',
+                "Le projet \"{$project->name}\" a été mis à jour : {$request->progress_percentage}% d'avancement",
+                [
+                    'progress_update_id' => $update->id,
+                    'progress_percentage' => $request->progress_percentage,
+                    'description' => $request->description,
+                ],
+                $user->id // Exclure l'utilisateur qui a créé la mise à jour
+            );
+            \Log::info('📬 Progress creation notification process completed.');
+        } catch (\Exception $e) {
+            \Log::warning("Failed to send progress creation notification: " . $e->getMessage());
+        }
 
         return redirect()->route('progress.index', $project)
             ->with('success', 'Mise à jour d\'avancement créée avec succès !');
