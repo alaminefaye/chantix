@@ -128,14 +128,20 @@ class ExpenseController extends Controller
             $validated['invoice_file'] = $path;
         }
 
-        $validated['project_id'] = $project->id;
-        $validated['created_by'] = $user->id;
-        $validated['is_paid'] = $request->has('is_paid');
+        try {
+            $validated['project_id'] = $project->id;
+            $validated['created_by'] = $user->id;
+            $validated['is_paid'] = $request->has('is_paid');
 
-        Expense::create($validated);
+            Expense::create($validated);
 
-        return redirect()->route('expenses.index', $project)
-            ->with('success', 'Dépense créée avec succès.');
+            return redirect()->route('expenses.index', $project)
+                ->with('success', 'Dépense créée avec succès.');
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Erreur lors de la création de la dépense: ' . $e->getMessage())
+                ->withInput();
+        }
     }
 
     /**
