@@ -36,6 +36,8 @@
                           'task_assigned' => 'ti-checklist',
                           'progress_update' => 'ti-progress',
                           'expense_added' => 'ti-currency-euro',
+                          'expense_created' => 'ti-currency-euro',
+                          'expense_updated' => 'ti-currency-euro',
                         ];
                         $icon = $icons[$notification->type] ?? 'ti-bell';
                         $colors = [
@@ -44,6 +46,8 @@
                           'task_assigned' => 'text-info',
                           'progress_update' => 'text-success',
                           'expense_added' => 'text-danger',
+                          'expense_created' => 'text-danger',
+                          'expense_updated' => 'text-warning',
                         ];
                         $color = $colors[$notification->type] ?? 'text-secondary';
                       @endphp

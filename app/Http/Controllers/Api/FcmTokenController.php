@@ -38,47 +38,46 @@ class FcmTokenController extends Controller
             ], 422);
         }
 
-        // Vérifier si le token existe déjà pour cet utilisateur
-        $fcmToken = FcmToken::where('user_id', $user->id)
-            ->where('token', $request->token)
-            ->first();
+        // Vérifier si le token existe déjà (peu importe l'utilisateur)
+        $existingToken = FcmToken::where('token', $request->token)->first();
 
-        if ($fcmToken) {
-            // Mettre à jour le token existant
-            $fcmToken->update([
-                'device_id' => $request->device_id ?? $fcmToken->device_id,
-                'device_type' => $request->device_type ?? $fcmToken->device_type,
-                'device_name' => $request->device_name ?? $fcmToken->device_name,
+        if ($existingToken) {
+            // Si le token appartient à un autre utilisateur, le désactiver
+            if ($existingToken->user_id != $user->id) {
+                $existingToken->deactivate();
+                // Créer un nouveau token pour cet utilisateur
+                $fcmToken = FcmToken::create([
+                    'user_id' => $user->id,
+                    'token' => $request->token,
+                    'device_id' => $request->device_id,
+                    'device_type' => $request->device_type ?? 'android',
+                    'device_name' => $request->device_name,
+                    'is_active' => true,
+                    'last_used_at' => now(),
+                ]);
+            } else {
+                // Mettre à jour le token existant pour cet utilisateur
+                $existingToken->update([
+                    'device_id' => $request->device_id ?? $existingToken->device_id,
+                    'device_type' => $request->device_type ?? $existingToken->device_type,
+                    'device_name' => $request->device_name ?? $existingToken->device_name,
+                    'is_active' => true,
+                    'last_used_at' => now(),
+                ]);
+                $fcmToken = $existingToken;
+            }
+        } else {
+            // Créer un nouveau token
+            $fcmToken = FcmToken::create([
+                'user_id' => $user->id,
+                'token' => $request->token,
+                'device_id' => $request->device_id,
+                'device_type' => $request->device_type ?? 'android',
+                'device_name' => $request->device_name,
                 'is_active' => true,
                 'last_used_at' => now(),
             ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Token FCM mis à jour avec succès.',
-                'data' => $fcmToken,
-            ], 200);
         }
-
-        // Vérifier si le token existe pour un autre utilisateur (désactiver l'ancien)
-        $existingToken = FcmToken::where('token', $request->token)
-            ->where('user_id', '!=', $user->id)
-            ->first();
-
-        if ($existingToken) {
-            $existingToken->deactivate();
-        }
-
-        // Créer un nouveau token
-        $fcmToken = FcmToken::create([
-            'user_id' => $user->id,
-            'token' => $request->token,
-            'device_id' => $request->device_id,
-            'device_type' => $request->device_type ?? 'android',
-            'device_name' => $request->device_name,
-            'is_active' => true,
-            'last_used_at' => now(),
-        ]);
 
         \Log::info('FCM Token created successfully', [
             'fcm_token_id' => $fcmToken->id,

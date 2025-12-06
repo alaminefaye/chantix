@@ -388,6 +388,8 @@
           'task_assigned': 'ti-checklist',
           'progress_update': 'ti-progress',
           'expense_added': 'ti-currency-euro',
+          'expense_created': 'ti-currency-euro',
+          'expense_updated': 'ti-currency-euro',
         };
         return icons[type] || 'ti-bell';
       }
