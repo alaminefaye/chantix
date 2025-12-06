@@ -18,7 +18,10 @@ class EmployeeController extends Controller
         $user = Auth::user();
         $companyId = $user->current_company_id;
 
+        \Log::info('EmployeeController@index - User ID: ' . $user->id . ', Company ID: ' . $companyId);
+
         if (!$companyId && !$user->isSuperAdmin()) {
+            \Log::warning('EmployeeController@index - No company ID and user is not super admin');
             return response()->json([
                 'success' => false,
                 'message' => 'Veuillez sélectionner une entreprise.',
@@ -29,9 +32,14 @@ class EmployeeController extends Controller
             ? Employee::forCompany($companyId)
             : Employee::query();
 
+        // Compter le total avant filtres
+        $totalBeforeFilters = $query->count();
+        \Log::info("EmployeeController@index - Total employees before filters: {$totalBeforeFilters}");
+
         // Filtre par statut actif
         if ($request->filled('active')) {
             $query->active();
+            \Log::info('EmployeeController@index - Filtering by active status');
         }
 
         // Recherche
@@ -43,6 +51,7 @@ class EmployeeController extends Controller
                   ->orWhere('phone', 'like', '%' . $request->search . '%')
                   ->orWhere('employee_number', 'like', '%' . $request->search . '%');
             });
+            \Log::info('EmployeeController@index - Filtering by search: ' . $request->search);
         }
 
         // Tri
@@ -51,6 +60,11 @@ class EmployeeController extends Controller
         $query->orderBy($sortBy, $sortOrder);
 
         $employees = $query->get();
+        
+        \Log::info("EmployeeController@index - Found {$employees->count()} employees");
+        if ($employees->count() > 0) {
+            \Log::info('EmployeeController@index - First employee: ' . json_encode($employees->first()->toArray()));
+        }
 
         return response()->json([
             'success' => true,
