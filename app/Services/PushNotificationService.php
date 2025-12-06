@@ -185,23 +185,23 @@ class PushNotificationService
             }
             
             // Configuration iOS (APNS) - Important pour que les notifications s'affichent
+            // Note: Ne pas mettre 'alert' dans le payload car withNotification() le gère déjà
+            // Pour iOS, on doit spécifier apns-push-type: 'alert' dans les headers
             try {
                 $message = $message->withApnsConfig([
                     'headers' => [
                         'apns-priority' => '10',
+                        'apns-push-type' => 'alert', // Important pour iOS 13+
                     ],
                     'payload' => [
                         'aps' => [
                             'sound' => 'default',
                             'badge' => 1,
                             'content-available' => 1,
-                            'alert' => [
-                                'title' => $title,
-                                'body' => $body,
-                            ],
                         ],
                     ],
                 ]);
+                Log::info("✅ APNS config set successfully with push-type: alert");
             } catch (\Exception $e) {
                 Log::warning("⚠️ Error setting APNS config: " . $e->getMessage());
             }
