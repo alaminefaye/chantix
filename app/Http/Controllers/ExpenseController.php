@@ -161,19 +161,10 @@ class ExpenseController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Project $project, $expense)
+    public function show(Project $project, Expense $expense)
     {
         $user = Auth::user();
         $projectCompanyId = $project->company_id;
-
-        // Récupérer la dépense manuellement si c'est un ID
-        if (is_numeric($expense)) {
-            $expense = Expense::where('id', $expense)
-                ->where('project_id', $project->id)
-                ->firstOrFail();
-        } elseif (!$expense instanceof Expense) {
-            abort(404, 'Dépense non trouvée.');
-        }
 
         // Vérifier que la dépense appartient au projet
         if ($expense->project_id !== $project->id) {
@@ -196,19 +187,10 @@ class ExpenseController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Project $project, $expense)
+    public function edit(Project $project, Expense $expense)
     {
         $user = Auth::user();
         $projectCompanyId = $project->company_id;
-
-        // Récupérer la dépense manuellement si c'est un ID
-        if (is_numeric($expense)) {
-            $expense = Expense::where('id', $expense)
-                ->where('project_id', $project->id)
-                ->firstOrFail();
-        } elseif (!$expense instanceof Expense) {
-            abort(404, 'Dépense non trouvée.');
-        }
 
         // Vérifier que la dépense appartient au projet
         if ($expense->project_id !== $project->id) {
@@ -232,19 +214,10 @@ class ExpenseController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Project $project, $expense)
+    public function update(Request $request, Project $project, Expense $expense)
     {
         $user = Auth::user();
         $projectCompanyId = $project->company_id;
-
-        // Récupérer la dépense manuellement si c'est un ID
-        if (is_numeric($expense)) {
-            $expense = Expense::where('id', $expense)
-                ->where('project_id', $project->id)
-                ->firstOrFail();
-        } elseif (!$expense instanceof Expense) {
-            abort(404, 'Dépense non trouvée.');
-        }
 
         // Vérifier que la dépense appartient au projet
         if ($expense->project_id !== $project->id) {
@@ -331,19 +304,10 @@ class ExpenseController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Project $project, $expense)
+    public function destroy(Project $project, Expense $expense)
     {
         $user = Auth::user();
         $projectCompanyId = $project->company_id;
-
-        // Récupérer la dépense manuellement si c'est un ID
-        if (is_numeric($expense)) {
-            $expense = Expense::where('id', $expense)
-                ->where('project_id', $project->id)
-                ->firstOrFail();
-        } elseif (!$expense instanceof Expense) {
-            abort(404, 'Dépense non trouvée.');
-        }
 
         // Vérifier que la dépense appartient au projet
         if ($expense->project_id !== $project->id) {
