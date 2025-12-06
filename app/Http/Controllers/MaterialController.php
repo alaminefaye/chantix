@@ -299,10 +299,17 @@ class MaterialController extends Controller
     /**
      * Retirer un matériau d'un projet
      */
-    public function removeFromProject(Project $project, Material $material)
+    public function removeFromProject(Project $project, $material)
     {
         $user = Auth::user();
         $companyId = $user->current_company_id;
+
+        // Récupérer le matériau manuellement si c'est un ID
+        if (is_numeric($material)) {
+            $material = Material::findOrFail($material);
+        } elseif (!$material instanceof Material) {
+            abort(404, 'Matériau non trouvé.');
+        }
 
         if ($project->company_id !== $companyId || $material->company_id !== $companyId) {
             abort(403, 'Accès non autorisé.');
@@ -364,10 +371,17 @@ class MaterialController extends Controller
     /**
      * Mettre à jour les quantités d'un matériau dans un projet
      */
-    public function updateProjectMaterial(Request $request, Project $project, Material $material)
+    public function updateProjectMaterial(Request $request, Project $project, $material)
     {
         $user = Auth::user();
         $companyId = $user->current_company_id;
+
+        // Récupérer le matériau manuellement si c'est un ID
+        if (is_numeric($material)) {
+            $material = Material::findOrFail($material);
+        } elseif (!$material instanceof Material) {
+            abort(404, 'Matériau non trouvé.');
+        }
 
         if ($project->company_id !== $companyId || $material->company_id !== $companyId) {
             abort(403, 'Accès non autorisé.');
@@ -540,10 +554,17 @@ class MaterialController extends Controller
     /**
      * Afficher le formulaire de transfert de matériaux
      */
-    public function showTransfer(Project $project, Material $material)
+    public function showTransfer(Project $project, $material)
     {
         $user = Auth::user();
         $companyId = $user->current_company_id;
+
+        // Récupérer le matériau manuellement si c'est un ID
+        if (is_numeric($material)) {
+            $material = Material::findOrFail($material);
+        } elseif (!$material instanceof Material) {
+            abort(404, 'Matériau non trouvé.');
+        }
 
         if ($project->company_id !== $companyId || $material->company_id !== $companyId) {
             abort(403, 'Accès non autorisé.');
@@ -566,10 +587,17 @@ class MaterialController extends Controller
     /**
      * Transférer des matériaux entre projets
      */
-    public function transfer(Request $request, Project $sourceProject, Material $material)
+    public function transfer(Request $request, Project $sourceProject, $material)
     {
         $user = Auth::user();
         $companyId = $user->current_company_id;
+
+        // Récupérer le matériau manuellement si c'est un ID
+        if (is_numeric($material)) {
+            $material = Material::findOrFail($material);
+        } elseif (!$material instanceof Material) {
+            abort(404, 'Matériau non trouvé.');
+        }
 
         if ($sourceProject->company_id !== $companyId || $material->company_id !== $companyId) {
             abort(403, 'Accès non autorisé.');
