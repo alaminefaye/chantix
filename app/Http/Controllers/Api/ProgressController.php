@@ -282,13 +282,18 @@ class ProgressController extends Controller
 
         // Gérer les photos existantes à conserver
         $photos = [];
-        if ($request->has('existing_photos') && is_array($request->existing_photos)) {
-            foreach ($request->existing_photos as $photoPath) {
-                // Extraire le chemin relatif si c'est une URL complète
-                $relativePath = str_replace('/storage/', '', $photoPath);
-                $relativePath = preg_replace('#^https?://[^/]+/#', '', $relativePath);
-                if (Storage::disk('public')->exists($relativePath)) {
-                    $photos[] = $relativePath;
+        if ($request->has('existing_photos')) {
+            $existingPhotos = $request->input('existing_photos', []);
+            // Si c'est un tableau, itérer dessus
+            if (is_array($existingPhotos)) {
+                foreach ($existingPhotos as $photoPath) {
+                    // Extraire le chemin relatif si c'est une URL complète
+                    $relativePath = str_replace('/storage/', '', $photoPath);
+                    $relativePath = preg_replace('#^https?://[^/]+/#', '', $relativePath);
+                    // Vérifier si le fichier existe
+                    if (Storage::disk('public')->exists($relativePath)) {
+                        $photos[] = $relativePath;
+                    }
                 }
             }
         }
@@ -303,13 +308,18 @@ class ProgressController extends Controller
 
         // Gérer les vidéos existantes à conserver
         $videos = [];
-        if ($request->has('existing_videos') && is_array($request->existing_videos)) {
-            foreach ($request->existing_videos as $videoPath) {
-                // Extraire le chemin relatif si c'est une URL complète
-                $relativePath = str_replace('/storage/', '', $videoPath);
-                $relativePath = preg_replace('#^https?://[^/]+/#', '', $relativePath);
-                if (Storage::disk('public')->exists($relativePath)) {
-                    $videos[] = $relativePath;
+        if ($request->has('existing_videos')) {
+            $existingVideos = $request->input('existing_videos', []);
+            // Si c'est un tableau, itérer dessus
+            if (is_array($existingVideos)) {
+                foreach ($existingVideos as $videoPath) {
+                    // Extraire le chemin relatif si c'est une URL complète
+                    $relativePath = str_replace('/storage/', '', $videoPath);
+                    $relativePath = preg_replace('#^https?://[^/]+/#', '', $relativePath);
+                    // Vérifier si le fichier existe
+                    if (Storage::disk('public')->exists($relativePath)) {
+                        $videos[] = $relativePath;
+                    }
                 }
             }
         }
