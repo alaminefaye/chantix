@@ -23,16 +23,29 @@ class PushNotificationService
             $firebaseCredentialsPath = config('services.firebase.credentials_path');
             
             if (!$firebaseCredentialsPath || !file_exists($firebaseCredentialsPath)) {
-                Log::error('Firebase credentials file not found at: ' . $firebaseCredentialsPath);
+                Log::error('❌ Firebase credentials file not found at: ' . $firebaseCredentialsPath);
                 return;
             }
+
+            Log::info('🔧 Initializing Firebase Messaging', [
+                'credentials_path' => $firebaseCredentialsPath,
+                'file_exists' => file_exists($firebaseCredentialsPath),
+            ]);
 
             $factory = (new Factory)
                 ->withServiceAccount($firebaseCredentialsPath);
 
             $this->messaging = $factory->createMessaging();
+            
+            if ($this->messaging) {
+                Log::info('✅ Firebase Messaging initialized successfully');
+            } else {
+                Log::error('❌ Firebase Messaging initialization returned null');
+            }
         } catch (\Exception $e) {
-            Log::error('Failed to initialize Firebase: ' . $e->getMessage());
+            Log::error('❌ Failed to initialize Firebase: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
         }
     }
 
@@ -65,27 +78,52 @@ class PushNotificationService
     public function sendToUsers(array $userIds, $title, $body, $data = [])
     {
         if (empty($userIds)) {
+            Log::warning("📭 sendToUsers called with empty user IDs");
             return false;
         }
 
         if (!$this->messaging) {
-            Log::warning('Firebase messaging not initialized');
+            Log::error('❌ Firebase messaging not initialized - cannot send push notifications');
             return false;
         }
 
+        Log::info("🔍 Looking for FCM tokens for users: " . implode(', ', $userIds));
+
+        // Récupérer tous les tokens (actifs et inactifs) pour debug
+        $allTokens = FcmToken::whereIn('user_id', $userIds)->get();
+        Log::info("📱 Total FCM tokens found (all status): " . $allTokens->count(), [
+            'tokens' => $allTokens->map(function($token) {
+                return [
+                    'user_id' => $token->user_id,
+                    'is_active' => $token->is_active,
+                    'token_preview' => substr($token->token, 0, 50) . '...',
+                ];
+            })->toArray(),
+        ]);
+
+        // Récupérer uniquement les tokens actifs
         $tokens = FcmToken::whereIn('user_id', $userIds)
             ->where('is_active', true)
             ->pluck('token')
             ->toArray();
 
+        Log::info("✅ Active FCM tokens found: " . count($tokens), [
+            'token_count' => count($tokens),
+            'user_ids' => $userIds,
+        ]);
+
         if (empty($tokens)) {
-            Log::info("No active FCM tokens found for users: " . implode(', ', $userIds));
+            Log::warning("⚠️ No active FCM tokens found for users: " . implode(', ', $userIds));
             // Ne pas retourner false ici, car les notifications en base ont été créées
             // On retourne true pour indiquer que le processus s'est bien déroulé
             return true;
         }
 
-        return $this->sendToTokens($tokens, $title, $body, $data);
+        Log::info("📤 Sending push notifications to " . count($tokens) . " tokens");
+        $result = $this->sendToTokens($tokens, $title, $body, $data);
+        Log::info("📬 Push notification send result: " . ($result ? 'success' : 'failed'));
+        
+        return $result;
     }
 
     /**
@@ -114,8 +152,15 @@ class PushNotificationService
     protected function sendToTokens(array $tokens, $title, $body, $data = [])
     {
         if (empty($tokens)) {
+            Log::warning("📭 sendToTokens called with empty tokens array");
             return false;
         }
+
+        Log::info("🚀 Starting to send push notifications", [
+            'token_count' => count($tokens),
+            'title' => $title,
+            'body' => $body,
+        ]);
 
         try {
             $notification = Notification::create($title, $body);
@@ -129,19 +174,26 @@ class PushNotificationService
 
             // Envoyer par batch de 500 (limite FCM)
             $chunks = array_chunk($tokens, 500);
+            Log::info("📦 Split tokens into " . count($chunks) . " chunks");
             
-            foreach ($chunks as $chunk) {
+            foreach ($chunks as $chunkIndex => $chunk) {
                 try {
+                    Log::info("📤 Sending chunk " . ($chunkIndex + 1) . " with " . count($chunk) . " tokens");
                     $multicast = $this->messaging->sendMulticast($message, $chunk);
                     
                     if (!$multicast) {
-                        Log::warning('Multicast send returned null');
+                        Log::error('❌ Multicast send returned null');
                         continue;
                     }
                     
                     // Obtenir les succès et échecs (méthodes correctes pour la bibliothèque Firebase)
                     $successes = $multicast->successes();
                     $failures = $multicast->failures();
+                    
+                    Log::info("📊 Chunk " . ($chunkIndex + 1) . " results", [
+                        'successes' => count($successes),
+                        'failures' => count($failures),
+                    ]);
                     
                     // Traiter les succès
                     if ($successes) {
@@ -150,7 +202,7 @@ class PushNotificationService
                                 $token = $success->target()->value();
                                 $results[] = $token;
                             } catch (\Exception $e) {
-                                Log::warning("Error processing success result: " . $e->getMessage());
+                                Log::warning("⚠️ Error processing success result: " . $e->getMessage());
                             }
                         }
                     }
@@ -162,24 +214,26 @@ class PushNotificationService
                                 $token = $failure->target()->value();
                                 $invalidTokens[] = $token;
                                 $error = $failure->error();
-                                Log::warning("Failed to send notification to token: {$token} - {$error->getMessage()}");
+                                Log::error("❌ Failed to send notification to token: " . substr($token, 0, 50) . "... - " . $error->getMessage());
                             } catch (\Exception $e) {
-                                Log::warning("Error processing failure result: " . $e->getMessage());
+                                Log::warning("⚠️ Error processing failure result: " . $e->getMessage());
                             }
                         }
                     }
                 } catch (\Exception $e) {
-                    Log::error('Error sending multicast: ' . $e->getMessage(), [
+                    Log::error('❌ Error sending multicast: ' . $e->getMessage(), [
                         'trace' => $e->getTraceAsString(),
                     ]);
                     // En cas d'erreur, essayer d'envoyer individuellement
+                    Log::info("🔄 Trying to send individually for chunk " . ($chunkIndex + 1));
                     foreach ($chunk as $token) {
                         try {
                             $this->messaging->send($message->withChangedTarget('token', $token));
                             $results[] = $token;
+                            Log::info("✅ Successfully sent to token: " . substr($token, 0, 50) . "...");
                         } catch (\Exception $tokenError) {
                             $invalidTokens[] = $token;
-                            Log::warning("Failed to send notification to token: {$token} - {$tokenError->getMessage()}");
+                            Log::error("❌ Failed to send notification to token: " . substr($token, 0, 50) . "... - " . $tokenError->getMessage());
                         }
                     }
                 }
@@ -187,17 +241,26 @@ class PushNotificationService
 
             // Désactiver les tokens invalides
             if (!empty($invalidTokens)) {
+                Log::warning("🔴 Deactivating " . count($invalidTokens) . " invalid tokens");
                 FcmToken::whereIn('token', $invalidTokens)->update(['is_active' => false]);
             }
 
             // Mettre à jour last_used_at pour les tokens valides
             if (!empty($results)) {
+                Log::info("✅ Updating last_used_at for " . count($results) . " successful tokens");
                 FcmToken::whereIn('token', $results)->update(['last_used_at' => now()]);
             }
 
+            Log::info("📬 Push notification sending completed", [
+                'successful' => count($results),
+                'failed' => count($invalidTokens),
+            ]);
+
             return true;
         } catch (\Exception $e) {
-            Log::error('Failed to send push notification: ' . $e->getMessage());
+            Log::error('❌ Failed to send push notification: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
             return false;
         }
     }

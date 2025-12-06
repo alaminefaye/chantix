@@ -79,9 +79,12 @@ class FcmTokenController extends Controller
             ]);
         }
 
-        \Log::info('FCM Token created successfully', [
+        \Log::info('✅ FCM Token saved successfully', [
             'fcm_token_id' => $fcmToken->id,
             'user_id' => $user->id,
+            'is_active' => $fcmToken->is_active,
+            'device_type' => $fcmToken->device_type,
+            'token_preview' => substr($fcmToken->token, 0, 50) . '...',
         ]);
 
         return response()->json([
