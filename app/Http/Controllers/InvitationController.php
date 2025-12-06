@@ -47,7 +47,7 @@ class InvitationController extends Controller
         }
 
         $invitations = $company->invitations()
-            ->with('inviter', 'role')
+            ->with('inviter', 'role', 'project')
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 

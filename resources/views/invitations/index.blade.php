@@ -42,6 +42,9 @@
                   <h6 class="fw-semibold mb-0">Rôle</h6>
                 </th>
                 <th class="border-bottom-0">
+                  <h6 class="fw-semibold mb-0">Projet</h6>
+                </th>
+                <th class="border-bottom-0">
                   <h6 class="fw-semibold mb-0">Invité par</h6>
                 </th>
                 <th class="border-bottom-0">
@@ -66,6 +69,15 @@
                   </td>
                   <td class="border-bottom-0">
                     <span class="badge bg-info rounded-3 fw-semibold">{{ $invitation->role->name ?? 'N/A' }}</span>
+                  </td>
+                  <td class="border-bottom-0">
+                    @if($invitation->project_id && $invitation->project)
+                      <span class="badge bg-primary rounded-3 fw-semibold" title="{{ $invitation->project->name }}">
+                        {{ Str::limit($invitation->project->name, 20) }}
+                      </span>
+                    @else
+                      <span class="badge bg-secondary rounded-3 fw-semibold">Tous les projets</span>
+                    @endif
                   </td>
                   <td class="border-bottom-0">
                     <p class="mb-0 fw-normal">{{ $invitation->inviter->name ?? 'N/A' }}</p>
@@ -109,10 +121,14 @@
                         </a>
                         <form action="{{ route('invitations.resend', ['company' => $company, 'invitation' => $invitation]) }}" method="POST" class="d-inline">
                           @csrf
-                          <button type="submit" class="btn btn-sm btn-info" title="Renvoyer">
+                          <button type="submit" class="btn btn-sm btn-info" title="Renvoyer l'invitation">
                             <i class="ti ti-refresh"></i>
                           </button>
                         </form>
+                      @else
+                        <button type="button" class="btn btn-sm btn-secondary" title="La modification n'est possible que pour les invitations en attente" disabled>
+                          <i class="ti ti-edit"></i>
+                        </button>
                       @endif
                       <form action="{{ route('invitations.destroy', ['company' => $company, 'invitation' => $invitation]) }}" method="POST" onsubmit="return confirm('{{ $invitation->status === 'pending' ? 'Annuler cette invitation ?' : 'Supprimer cette invitation ?' }}');" class="d-inline">
                         @csrf
@@ -126,7 +142,7 @@
                 </tr>
               @empty
                 <tr>
-                  <td colspan="7" class="text-center py-4">
+                  <td colspan="8" class="text-center py-4">
                     <p class="mb-0">Aucune invitation. <a href="{{ route('invitations.create', $company) }}">Inviter un collaborateur</a></p>
                   </td>
                 </tr>

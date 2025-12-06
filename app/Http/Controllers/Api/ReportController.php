@@ -63,9 +63,30 @@ class ReportController extends Controller
 
         $reports = $query->get();
 
+        // S'assurer que les dates sont bien formatées en string
+        $reportsData = $reports->map(function($report) {
+            return [
+                'id' => $report->id,
+                'project_id' => $report->project_id,
+                'created_by' => $report->created_by,
+                'type' => $report->type,
+                'report_date' => $report->report_date ? $report->report_date->format('Y-m-d') : null,
+                'end_date' => $report->end_date ? $report->end_date->format('Y-m-d') : null,
+                'data' => $report->data,
+                'file_path' => $report->file_path,
+                'created_at' => $report->created_at ? $report->created_at->toDateTimeString() : null,
+                'updated_at' => $report->updated_at ? $report->updated_at->toDateTimeString() : null,
+                'creator' => $report->creator ? [
+                    'id' => $report->creator->id,
+                    'name' => $report->creator->name,
+                    'email' => $report->creator->email,
+                ] : null,
+            ];
+        })->values();
+
         return response()->json([
             'success' => true,
-            'data' => $reports,
+            'data' => $reportsData,
         ], 200);
     }
 
