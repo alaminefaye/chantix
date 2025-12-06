@@ -168,12 +168,20 @@ class ReportController extends Controller
 
         // Générer le PDF
         try {
-            $pdf = Pdf::loadView('reports.pdf.' . $type, [
+            $viewData = [
                 'project' => $project,
-                'date' => $reportDate,
-                'endDate' => $endDate,
                 'data' => $data,
-            ]);
+            ];
+            
+            // Adapter les variables selon le type de rapport
+            if ($type === 'journalier') {
+                $viewData['date'] = $reportDate;
+            } else {
+                $viewData['startDate'] = $reportDate;
+                $viewData['endDate'] = $endDate;
+            }
+            
+            $pdf = Pdf::loadView('reports.pdf.' . $type, $viewData);
 
             $filename = 'rapport-' . $type . '-' . $project->name . '-' . $reportDate->format('Y-m-d') . '.pdf';
             $filePath = 'reports/' . $filename;
@@ -283,13 +291,19 @@ class ReportController extends Controller
             ->with('assignedEmployee')
             ->get();
 
+        // Calculer les heures totales travaillées
+        $totalHours = $attendances->sum(function($attendance) {
+            return $attendance->hours_worked ?? 0;
+        });
+
         return [
             'attendances' => $attendances,
-            'progress_updates' => $progressUpdates,
+            'progressUpdates' => $progressUpdates,
             'expenses' => $expenses,
             'tasks' => $tasks,
-            'total_expenses' => $expenses->sum('amount'),
-            'total_employees' => $attendances->where('is_present', true)->count(),
+            'totalExpenses' => $expenses->sum('amount'),
+            'totalEmployees' => $attendances->where('is_present', true)->count(),
+            'totalHours' => $totalHours,
         ];
     }
 
@@ -320,15 +334,44 @@ class ReportController extends Controller
             ->with('assignedEmployee')
             ->get();
 
+        // Calculer les heures totales travaillées
+        $totalHours = $attendances->sum(function($attendance) {
+            return $attendance->hours_worked ?? 0;
+        });
+
+        // Calculer les heures supplémentaires totales
+        $totalOvertime = $attendances->sum(function($attendance) {
+            return $attendance->overtime_hours ?? 0;
+        });
+
+        // Tâches en retard
+        $overdueTasks = $tasks->filter(function($task) use ($endDate) {
+            return $task->deadline && 
+                   \Carbon\Carbon::parse($task->deadline)->isBefore($endDate) && 
+                   $task->status !== 'termine';
+        })->count();
+
+        // Évolution de l'avancement
+        $progressEvolution = $progressUpdates->map(function($update) {
+            return [
+                'date' => $update->created_at->format('d/m/Y'),
+                'progress' => $update->progress_percentage ?? 0,
+            ];
+        })->values()->toArray();
+
         return [
             'attendances' => $attendances,
-            'progress_updates' => $progressUpdates,
+            'progressUpdates' => $progressUpdates,
             'expenses' => $expenses,
             'tasks' => $tasks,
-            'total_expenses' => $expenses->sum('amount'),
-            'total_employees' => $attendances->where('is_present', true)->count(),
-            'expenses_by_type' => $expenses->groupBy('type')->map->sum('amount'),
-            'tasks_by_status' => $tasks->groupBy('status')->map->count(),
+            'totalExpenses' => $expenses->sum('amount'),
+            'totalEmployees' => $attendances->where('is_present', true)->count(),
+            'totalHours' => $totalHours,
+            'totalOvertime' => $totalOvertime,
+            'expensesByType' => $expenses->groupBy('type')->map->sum('amount'),
+            'tasksByStatus' => $tasks->groupBy('status')->map->count(),
+            'overdueTasks' => $overdueTasks,
+            'progressEvolution' => $progressEvolution,
         ];
     }
 }
