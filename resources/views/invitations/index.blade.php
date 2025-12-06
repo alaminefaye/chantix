@@ -125,10 +125,14 @@
                             <i class="ti ti-refresh"></i>
                           </button>
                         </form>
-                      @else
-                        <button type="button" class="btn btn-sm btn-secondary" title="La modification n'est possible que pour les invitations en attente" disabled>
+                      @elseif($invitation->status === 'pending' && $invitation->isExpired())
+                        <button type="button" class="btn btn-sm btn-secondary" title="Cette invitation a expiré et ne peut plus être modifiée" disabled>
                           <i class="ti ti-edit"></i>
                         </button>
+                      @else
+                        <a href="{{ route('invitations.edit', ['company' => $company, 'invitation' => $invitation]) }}" class="btn btn-sm btn-warning" title="Modifier (pour mettre à jour le projet associé)">
+                          <i class="ti ti-edit"></i>
+                        </a>
                       @endif
                       <form action="{{ route('invitations.destroy', ['company' => $company, 'invitation' => $invitation]) }}" method="POST" onsubmit="return confirm('{{ $invitation->status === 'pending' ? 'Annuler cette invitation ?' : 'Supprimer cette invitation ?' }}');" class="d-inline">
                         @csrf

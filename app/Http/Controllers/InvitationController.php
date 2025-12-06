@@ -420,10 +420,10 @@ class InvitationController extends Controller
             abort(403, 'Seuls les administrateurs peuvent modifier des invitations. Votre rôle: ' . ($role ? $role->name : 'aucun'));
         }
 
-        // Seules les invitations en attente peuvent être modifiées
-        if ($invitation->status !== 'pending' || $invitation->isExpired()) {
+        // Les invitations expirées ne peuvent pas être modifiées
+        if ($invitation->isExpired()) {
             return redirect()->route('invitations.index', $company)
-                ->with('error', 'Seules les invitations en attente peuvent être modifiées.');
+                ->with('error', 'Cette invitation a expiré et ne peut plus être modifiée.');
         }
 
         $roles = Role::all();
