@@ -52,14 +52,18 @@ class ExpenseController extends Controller
     public function create(Project $project)
     {
         $user = Auth::user();
-        $companyId = $user->current_company_id;
+        $projectCompanyId = $project->company_id;
 
-        if ($project->company_id !== $companyId) {
-            abort(403, 'Accès non autorisé.');
+        // Vérifier les permissions : Super admin ou utilisateur de l'entreprise
+        if (!$user->isSuperAdmin()) {
+            // Vérifier que l'utilisateur appartient à l'entreprise du projet
+            if (!$user->companies()->where('companies.id', $projectCompanyId)->exists()) {
+                abort(403, 'Vous n\'appartenez pas à l\'entreprise de ce projet.');
+            }
         }
 
-        $materials = Material::forCompany($companyId)->active()->get();
-        $employees = Employee::forCompany($companyId)->active()->get();
+        $materials = Material::forCompany($projectCompanyId)->active()->get();
+        $employees = Employee::forCompany($projectCompanyId)->active()->get();
 
         return view('expenses.create', compact('project', 'materials', 'employees'));
     }
@@ -70,10 +74,14 @@ class ExpenseController extends Controller
     public function store(Request $request, Project $project)
     {
         $user = Auth::user();
-        $companyId = $user->current_company_id;
+        $projectCompanyId = $project->company_id;
 
-        if ($project->company_id !== $companyId) {
-            abort(403, 'Accès non autorisé.');
+        // Vérifier les permissions : Super admin ou utilisateur de l'entreprise
+        if (!$user->isSuperAdmin()) {
+            // Vérifier que l'utilisateur appartient à l'entreprise du projet
+            if (!$user->companies()->where('companies.id', $projectCompanyId)->exists()) {
+                abort(403, 'Vous n\'appartenez pas à l\'entreprise de ce projet.');
+            }
         }
 
         $validated = $request->validate([
@@ -93,20 +101,22 @@ class ExpenseController extends Controller
             'paid_date' => 'nullable|date',
         ]);
 
-        // Vérifier que le matériau ou l'employé appartient à la même entreprise
+        // Vérifier que le matériau ou l'employé appartient à la même entreprise que le projet
         if (isset($validated['material_id']) && $validated['material_id']) {
             $material = Material::findOrFail($validated['material_id']);
-            if ($material->company_id !== $companyId) {
+            if ($material->company_id !== $projectCompanyId) {
                 return redirect()->back()
-                    ->with('error', 'Le matériau sélectionné n\'appartient pas à votre entreprise.');
+                    ->with('error', 'Le matériau sélectionné n\'appartient pas à l\'entreprise du projet.')
+                    ->withInput();
             }
         }
 
         if (isset($validated['employee_id']) && $validated['employee_id']) {
             $employee = Employee::findOrFail($validated['employee_id']);
-            if ($employee->company_id !== $companyId) {
+            if ($employee->company_id !== $projectCompanyId) {
                 return redirect()->back()
-                    ->with('error', 'L\'employé sélectionné n\'appartient pas à votre entreprise.');
+                    ->with('error', 'L\'employé sélectionné n\'appartient pas à l\'entreprise du projet.')
+                    ->withInput();
             }
         }
 
