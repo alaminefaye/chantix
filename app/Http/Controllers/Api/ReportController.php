@@ -126,7 +126,7 @@ class ReportController extends Controller
             ], 400);
         }
 
-        $project = Project::find($projectId);
+        $project = Project::with('company')->find($projectId);
         if (!$project) {
             return response()->json([
                 'success' => false,
@@ -209,9 +209,18 @@ class ReportController extends Controller
                 'file_url' => asset('storage/' . $filePath),
             ], 201);
         } catch (\Exception $e) {
+            // Log l'erreur pour le débogage
+            \Log::error('Erreur lors de la génération du rapport', [
+                'project_id' => $projectId,
+                'type' => $type,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Erreur lors de la génération du PDF: ' . $e->getMessage(),
+                'error_details' => config('app.debug') ? $e->getTraceAsString() : null,
             ], 500);
         }
     }
@@ -296,7 +305,7 @@ class ReportController extends Controller
 
         // Calculer les heures totales travaillées
         $totalHours = $attendances->sum(function($attendance) {
-            return $attendance->hours_worked ?? 0;
+            return (float)($attendance->hours_worked ?? 0);
         });
 
         return [
@@ -304,9 +313,9 @@ class ReportController extends Controller
             'progressUpdates' => $progressUpdates,
             'expenses' => $expenses,
             'tasks' => $tasks,
-            'totalExpenses' => $expenses->sum('amount'),
-            'totalEmployees' => $attendances->where('is_present', true)->count(),
-            'totalHours' => $totalHours,
+            'totalExpenses' => (float)$expenses->sum('amount'),
+            'totalEmployees' => (int)$attendances->where('is_present', true)->count(),
+            'totalHours' => (float)$totalHours,
         ];
     }
 
@@ -339,12 +348,12 @@ class ReportController extends Controller
 
         // Calculer les heures totales travaillées
         $totalHours = $attendances->sum(function($attendance) {
-            return $attendance->hours_worked ?? 0;
+            return (float)($attendance->hours_worked ?? 0);
         });
 
         // Calculer les heures supplémentaires totales
         $totalOvertime = $attendances->sum(function($attendance) {
-            return $attendance->overtime_hours ?? 0;
+            return (float)($attendance->overtime_hours ?? 0);
         });
 
         // Tâches en retard
@@ -358,7 +367,7 @@ class ReportController extends Controller
         $progressEvolution = $progressUpdates->map(function($update) {
             return [
                 'date' => $update->created_at->format('d/m/Y'),
-                'progress' => $update->progress_percentage ?? 0,
+                'progress' => (int)($update->progress_percentage ?? 0),
             ];
         })->values()->toArray();
 
@@ -367,13 +376,17 @@ class ReportController extends Controller
             'progressUpdates' => $progressUpdates,
             'expenses' => $expenses,
             'tasks' => $tasks,
-            'totalExpenses' => $expenses->sum('amount'),
-            'totalEmployees' => $attendances->where('is_present', true)->count(),
-            'totalHours' => $totalHours,
-            'totalOvertime' => $totalOvertime,
-            'expensesByType' => $expenses->groupBy('type')->map->sum('amount'),
-            'tasksByStatus' => $tasks->groupBy('status')->map->count(),
-            'overdueTasks' => $overdueTasks,
+            'totalExpenses' => (float)$expenses->sum('amount'),
+            'totalEmployees' => (int)$attendances->where('is_present', true)->count(),
+            'totalHours' => (float)$totalHours,
+            'totalOvertime' => (float)$totalOvertime,
+            'expensesByType' => $expenses->groupBy('type')->map(function($group) {
+                return (float)$group->sum('amount');
+            }),
+            'tasksByStatus' => $tasks->groupBy('status')->map(function($group) {
+                return $group->count();
+            }),
+            'overdueTasks' => (int)$overdueTasks,
             'progressEvolution' => $progressEvolution,
         ];
     }

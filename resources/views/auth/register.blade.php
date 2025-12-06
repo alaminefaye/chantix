@@ -11,7 +11,7 @@
         <div class="card mb-0">
           <div class="card-body">
             <a href="{{ route('dashboard') }}" class="text-nowrap logo-img text-center d-block py-3 w-100">
-              <img src="{{ asset('assets/images/logos/dark-logo.svg') }}" width="180" alt="">
+              <img src="{{ asset('assets/images/logos/logo.png') }}" width="180" alt="Chantix Logo">
             </a>
             @if(isset($invitation) && $invitation)
               <div class="alert alert-info mb-3">
