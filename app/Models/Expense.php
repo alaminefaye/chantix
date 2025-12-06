@@ -114,4 +114,17 @@ class Expense extends Model
     {
         return $query->where('is_paid', false);
     }
+
+    /**
+     * Résoudre le modèle pour le route model binding
+     * Permet de résoudre la dépense même dans un contexte de projet
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        $field = $field ?: $this->getRouteKeyName();
+        
+        // Si on est dans un contexte de projet (via la route), on peut vérifier le project_id
+        // Sinon, on fait une recherche normale par ID
+        return $this->where($field, $value)->first();
+    }
 }
