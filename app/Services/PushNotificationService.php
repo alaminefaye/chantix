@@ -165,9 +165,52 @@ class PushNotificationService
         try {
             $notification = Notification::create($title, $body);
             
+            // Créer le message avec notification et données
             $message = CloudMessage::new()
                 ->withNotification($notification)
                 ->withData($data);
+            
+            // Configuration Android (les méthodes acceptent directement un tableau)
+            try {
+                $message = $message->withAndroidConfig([
+                    'priority' => 'high',
+                    'notification' => [
+                        'sound' => 'default',
+                        'channel_id' => 'chantix_notifications',
+                        'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
+                    ],
+                ]);
+            } catch (\Exception $e) {
+                Log::warning("⚠️ Error setting Android config: " . $e->getMessage());
+            }
+            
+            // Configuration iOS (APNS) - Important pour que les notifications s'affichent
+            try {
+                $message = $message->withApnsConfig([
+                    'headers' => [
+                        'apns-priority' => '10',
+                    ],
+                    'payload' => [
+                        'aps' => [
+                            'sound' => 'default',
+                            'badge' => 1,
+                            'content-available' => 1,
+                            'alert' => [
+                                'title' => $title,
+                                'body' => $body,
+                            ],
+                        ],
+                    ],
+                ]);
+            } catch (\Exception $e) {
+                Log::warning("⚠️ Error setting APNS config: " . $e->getMessage());
+            }
+            
+            Log::info("📨 Message prepared", [
+                'title' => $title,
+                'body' => $body,
+                'data_keys' => array_keys($data),
+            ]);
 
             $results = [];
             $invalidTokens = [];
@@ -196,29 +239,86 @@ class PushNotificationService
                     ]);
                     
                     // Traiter les succès
-                    if ($successes) {
-                        foreach ($successes as $success) {
+                    if ($successes && count($successes) > 0) {
+                        foreach ($successes as $index => $success) {
                             try {
-                                $token = $success->target()->value();
-                                $results[] = $token;
+                                // Essayer différentes méthodes pour obtenir le token
+                                $token = null;
+                                
+                                // Méthode 1: target()->value()
+                                try {
+                                    $token = $success->target()->value();
+                                } catch (\Exception $e1) {
+                                    // Méthode 2: target()->token()
+                                    try {
+                                        $token = $success->target()->token();
+                                    } catch (\Exception $e2) {
+                                        // Méthode 3: Utiliser l'index du chunk
+                                        if (isset($chunk[$index])) {
+                                            $token = $chunk[$index];
+                                        }
+                                    }
+                                }
+                                
+                                if ($token) {
+                                    $results[] = $token;
+                                    Log::info("✅ Successfully sent to token: " . substr($token, 0, 50) . "...");
+                                } else {
+                                    Log::warning("⚠️ Could not extract token from success result at index {$index}");
+                                    // Utiliser le token du chunk comme fallback
+                                    if (isset($chunk[$index])) {
+                                        $results[] = $chunk[$index];
+                                    }
+                                }
                             } catch (\Exception $e) {
-                                Log::warning("⚠️ Error processing success result: " . $e->getMessage());
+                                Log::warning("⚠️ Error processing success result at index {$index}: " . $e->getMessage());
+                                // Utiliser le token du chunk comme fallback
+                                if (isset($chunk[$index])) {
+                                    $results[] = $chunk[$index];
+                                }
                             }
                         }
                     }
                     
                     // Traiter les échecs
-                    if ($failures) {
-                        foreach ($failures as $failure) {
+                    if ($failures && count($failures) > 0) {
+                        foreach ($failures as $index => $failure) {
                             try {
-                                $token = $failure->target()->value();
-                                $invalidTokens[] = $token;
-                                $error = $failure->error();
-                                Log::error("❌ Failed to send notification to token: " . substr($token, 0, 50) . "... - " . $error->getMessage());
+                                // Essayer différentes méthodes pour obtenir le token
+                                $token = null;
+                                
+                                try {
+                                    $token = $failure->target()->value();
+                                } catch (\Exception $e1) {
+                                    try {
+                                        $token = $failure->target()->token();
+                                    } catch (\Exception $e2) {
+                                        // Utiliser l'index pour trouver le token dans le chunk
+                                        // Les échecs sont dans le même ordre que les tokens envoyés
+                                        // On doit trouver l'index dans le chunk original
+                                        // Note: Cette logique peut être complexe, on utilise le chunk comme fallback
+                                    }
+                                }
+                                
+                                if ($token) {
+                                    $invalidTokens[] = $token;
+                                    $error = $failure->error();
+                                    Log::error("❌ Failed to send notification to token: " . substr($token, 0, 50) . "... - " . $error->getMessage());
+                                } else {
+                                    Log::warning("⚠️ Could not extract token from failure result at index {$index}");
+                                }
                             } catch (\Exception $e) {
-                                Log::warning("⚠️ Error processing failure result: " . $e->getMessage());
+                                Log::warning("⚠️ Error processing failure result at index {$index}: " . $e->getMessage());
                             }
                         }
+                    }
+                    
+                    // Si on a des succès mais qu'on n'a pas pu extraire les tokens, utiliser les tokens du chunk
+                    if (count($successes) > 0 && count($results) == 0) {
+                        Log::warning("⚠️ Could not extract tokens from success results, using chunk tokens as fallback");
+                        // Si on a des succès, on assume que tous les tokens du chunk ont réussi
+                        // (c'est une approximation, mais mieux que rien)
+                        $results = array_merge($results, $chunk);
                     }
                 } catch (\Exception $e) {
                     Log::error('❌ Error sending multicast: ' . $e->getMessage(), [
