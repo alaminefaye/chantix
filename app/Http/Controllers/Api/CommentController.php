@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Comment;
 use App\Models\Project;
 use App\Models\User;
+use App\Services\PushNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -211,6 +212,87 @@ class CommentController extends Controller
         $comment->load(['user', 'replies' => function($q) {
             $q->with('user')->orderBy('created_at', 'asc');
         }]);
+
+        // Envoyer des notifications push
+        // 1. Notifier les utilisateurs mentionnés
+        if (!empty($mentionedUsers)) {
+            foreach ($mentionedUsers as $mentionedUserId) {
+                // Créer notification DB
+                \App\Models\Notification::create([
+                    'user_id' => $mentionedUserId,
+                    'project_id' => $project->id,
+                    'type' => 'mention',
+                    'title' => 'Vous avez été mentionné',
+                    'message' => $user->name . ' vous a mentionné dans un commentaire sur le projet "' . $project->name . '"',
+                    'link' => '/projects/' . $project->id . '/comments',
+                    'data' => [
+                        'comment_id' => $comment->id,
+                        'mentioned_by' => $user->id,
+                    ],
+                ]);
+
+                // Envoyer notification push
+                try {
+                    $pushService = new PushNotificationService();
+                    $pushService->sendToUser(
+                        $mentionedUserId,
+                        'Vous avez été mentionné',
+                        $user->name . ' vous a mentionné dans un commentaire sur le projet "' . $project->name . '"',
+                        [
+                            'type' => 'mention',
+                            'comment_id' => $comment->id,
+                            'project_id' => $project->id,
+                            'mentioned_by' => $user->id,
+                        ]
+                    );
+                } catch (\Exception $e) {
+                    \Log::warning("Failed to send mention push notification: " . $e->getMessage());
+                }
+            }
+        }
+
+        // 2. Notifier les autres membres du projet (sauf l'auteur et les mentionnés)
+        try {
+            $pushService = new PushNotificationService();
+            $contentPreview = $request->input('content') ? substr($request->input('content'), 0, 100) . '...' : 'Pièce jointe';
+            $pushService->notifyProjectStakeholders(
+                $project,
+                'comment',
+                'Nouveau commentaire',
+                $user->name . ' a ajouté un commentaire sur le projet "' . $project->name . '"',
+                [
+                    'comment_id' => $comment->id,
+                    'comment_content' => $contentPreview,
+                    'has_attachments' => !empty($attachments),
+                ],
+                array_merge([$user->id], $mentionedUsers) // Exclure l'auteur et les mentionnés
+            );
+            \Log::info('📬 Comment notification process completed.');
+        } catch (\Exception $e) {
+            \Log::warning("Failed to send comment push notification: " . $e->getMessage());
+        }
+
+        // 3. Créer notifications DB pour les autres membres
+        $companyUsers = $project->company->users()
+            ->where('users.id', '!=', $user->id)
+            ->pluck('users.id')
+            ->toArray();
+
+        foreach ($companyUsers as $memberId) {
+            if (!in_array($memberId, $mentionedUsers)) {
+                \App\Models\Notification::create([
+                    'user_id' => $memberId,
+                    'project_id' => $project->id,
+                    'type' => 'comment',
+                    'title' => 'Nouveau commentaire',
+                    'message' => $user->name . ' a ajouté un commentaire sur le projet "' . $project->name . '"',
+                    'link' => '/projects/' . $project->id . '/comments',
+                    'data' => [
+                        'comment_id' => $comment->id,
+                    ],
+                ]);
+            }
+        }
 
         return response()->json($comment, 201);
     }

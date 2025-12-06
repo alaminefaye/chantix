@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Comment;
 use App\Models\Project;
 use App\Models\User;
+use App\Services\PushNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -96,7 +97,7 @@ class CommentController extends Controller
         // Envoyer des notifications aux utilisateurs mentionnés
         if (!empty($mentionedUsers)) {
             foreach ($mentionedUsers as $mentionedUserId) {
-                \App\Models\Notification::create([
+                $dbNotification = \App\Models\Notification::create([
                     'user_id' => $mentionedUserId,
                     'project_id' => $project->id,
                     'type' => 'mention',
@@ -108,10 +109,49 @@ class CommentController extends Controller
                         'mentioned_by' => $user->id,
                     ],
                 ]);
+
+                // Envoyer notification push pour les mentions
+                try {
+                    $pushService = new PushNotificationService();
+                    $pushService->sendToUser(
+                        $mentionedUserId,
+                        'Vous avez été mentionné',
+                        $user->name . ' vous a mentionné dans un commentaire sur le projet "' . $project->name . '"',
+                        [
+                            'type' => 'mention',
+                            'comment_id' => $comment->id,
+                            'project_id' => $project->id,
+                            'mentioned_by' => $user->id,
+                        ]
+                    );
+                } catch (\Exception $e) {
+                    \Log::warning("Failed to send mention push notification: " . $e->getMessage());
+                }
             }
         }
 
-        // Notifier les autres membres de l'entreprise (sauf l'auteur)
+        // Notifier les autres membres du projet (sauf l'auteur et les mentionnés)
+        try {
+            $pushService = new PushNotificationService();
+            $contentPreview = $validated['content'] ? substr($validated['content'], 0, 100) . '...' : 'Pièce jointe';
+            $pushService->notifyProjectStakeholders(
+                $project,
+                'comment',
+                'Nouveau commentaire',
+                $user->name . ' a ajouté un commentaire sur le projet "' . $project->name . '"',
+                [
+                    'comment_id' => $comment->id,
+                    'comment_content' => $contentPreview,
+                    'has_attachments' => !empty($attachments),
+                ],
+                array_merge([$user->id], $mentionedUsers) // Exclure l'auteur et les mentionnés (déjà notifiés)
+            );
+            \Log::info('📬 Comment notification process completed.');
+        } catch (\Exception $e) {
+            \Log::warning("Failed to send comment push notification: " . $e->getMessage());
+        }
+
+        // Notifier les autres membres de l'entreprise (sauf l'auteur) - notifications DB
         $companyUsers = $project->company->users()
             ->where('users.id', '!=', $user->id)
             ->pluck('users.id')
