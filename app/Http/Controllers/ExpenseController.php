@@ -18,10 +18,14 @@ class ExpenseController extends Controller
     public function index(Project $project)
     {
         $user = Auth::user();
-        $companyId = $user->current_company_id;
+        $projectCompanyId = $project->company_id;
 
-        if ($project->company_id !== $companyId) {
-            abort(403, 'Accès non autorisé.');
+        // Vérifier les permissions : Super admin ou utilisateur de l'entreprise
+        if (!$user->isSuperAdmin()) {
+            // Vérifier que l'utilisateur appartient à l'entreprise du projet
+            if (!$user->companies()->where('companies.id', $projectCompanyId)->exists()) {
+                abort(403, 'Vous n\'appartenez pas à l\'entreprise de ce projet.');
+            }
         }
 
         $type = request()->get('type');
@@ -160,10 +164,19 @@ class ExpenseController extends Controller
     public function show(Project $project, Expense $expense)
     {
         $user = Auth::user();
-        $companyId = $user->current_company_id;
+        $projectCompanyId = $project->company_id;
 
-        if ($project->company_id !== $companyId || $expense->project_id !== $project->id) {
-            abort(403, 'Accès non autorisé.');
+        // Vérifier que la dépense appartient au projet
+        if ($expense->project_id !== $project->id) {
+            abort(404, 'Dépense non trouvée dans ce projet.');
+        }
+
+        // Vérifier les permissions : Super admin ou utilisateur de l'entreprise
+        if (!$user->isSuperAdmin()) {
+            // Vérifier que l'utilisateur appartient à l'entreprise du projet
+            if (!$user->companies()->where('companies.id', $projectCompanyId)->exists()) {
+                abort(403, 'Vous n\'appartenez pas à l\'entreprise de ce projet.');
+            }
         }
 
         $expense->load('creator', 'material', 'employee', 'project');
@@ -177,14 +190,23 @@ class ExpenseController extends Controller
     public function edit(Project $project, Expense $expense)
     {
         $user = Auth::user();
-        $companyId = $user->current_company_id;
+        $projectCompanyId = $project->company_id;
 
-        if ($project->company_id !== $companyId || $expense->project_id !== $project->id) {
-            abort(403, 'Accès non autorisé.');
+        // Vérifier que la dépense appartient au projet
+        if ($expense->project_id !== $project->id) {
+            abort(404, 'Dépense non trouvée dans ce projet.');
         }
 
-        $materials = Material::forCompany($companyId)->active()->get();
-        $employees = Employee::forCompany($companyId)->active()->get();
+        // Vérifier les permissions : Super admin ou utilisateur de l'entreprise
+        if (!$user->isSuperAdmin()) {
+            // Vérifier que l'utilisateur appartient à l'entreprise du projet
+            if (!$user->companies()->where('companies.id', $projectCompanyId)->exists()) {
+                abort(403, 'Vous n\'appartenez pas à l\'entreprise de ce projet.');
+            }
+        }
+
+        $materials = Material::forCompany($projectCompanyId)->active()->get();
+        $employees = Employee::forCompany($projectCompanyId)->active()->get();
 
         return view('expenses.edit', compact('project', 'expense', 'materials', 'employees'));
     }
@@ -195,10 +217,19 @@ class ExpenseController extends Controller
     public function update(Request $request, Project $project, Expense $expense)
     {
         $user = Auth::user();
-        $companyId = $user->current_company_id;
+        $projectCompanyId = $project->company_id;
 
-        if ($project->company_id !== $companyId || $expense->project_id !== $project->id) {
-            abort(403, 'Accès non autorisé.');
+        // Vérifier que la dépense appartient au projet
+        if ($expense->project_id !== $project->id) {
+            abort(404, 'Dépense non trouvée dans ce projet.');
+        }
+
+        // Vérifier les permissions : Super admin ou utilisateur de l'entreprise
+        if (!$user->isSuperAdmin()) {
+            // Vérifier que l'utilisateur appartient à l'entreprise du projet
+            if (!$user->companies()->where('companies.id', $projectCompanyId)->exists()) {
+                abort(403, 'Vous n\'appartenez pas à l\'entreprise de ce projet.');
+            }
         }
 
         $validated = $request->validate([
@@ -214,24 +245,26 @@ class ExpenseController extends Controller
             'material_id' => 'nullable|exists:materials,id',
             'employee_id' => 'nullable|exists:employees,id',
             'notes' => 'nullable|string',
-            'is_paid' => 'boolean',
+            'is_paid' => 'nullable',
             'paid_date' => 'nullable|date',
         ]);
 
-        // Vérifier que le matériau ou l'employé appartient à la même entreprise
+        // Vérifier que le matériau ou l'employé appartient à la même entreprise que le projet
         if (isset($validated['material_id']) && $validated['material_id']) {
             $material = Material::findOrFail($validated['material_id']);
-            if ($material->company_id !== $companyId) {
+            if ($material->company_id !== $projectCompanyId) {
                 return redirect()->back()
-                    ->with('error', 'Le matériau sélectionné n\'appartient pas à votre entreprise.');
+                    ->with('error', 'Le matériau sélectionné n\'appartient pas à l\'entreprise du projet.')
+                    ->withInput();
             }
         }
 
         if (isset($validated['employee_id']) && $validated['employee_id']) {
             $employee = Employee::findOrFail($validated['employee_id']);
-            if ($employee->company_id !== $companyId) {
+            if ($employee->company_id !== $projectCompanyId) {
                 return redirect()->back()
-                    ->with('error', 'L\'employé sélectionné n\'appartient pas à votre entreprise.');
+                    ->with('error', 'L\'employé sélectionné n\'appartient pas à l\'entreprise du projet.')
+                    ->withInput();
             }
         }
 
@@ -251,7 +284,16 @@ class ExpenseController extends Controller
             unset($validated['invoice_file']);
         }
 
-        $validated['is_paid'] = $request->has('is_paid');
+        // Gérer is_paid : checkbox non cochée = false, cochée = true
+        $validated['is_paid'] = $request->has('is_paid') && ($request->input('is_paid') == '1' || $request->input('is_paid') === true);
+        
+        // Si is_paid est false, on ne doit pas avoir de paid_date
+        if (!$validated['is_paid']) {
+            $validated['paid_date'] = null;
+        } elseif ($validated['is_paid'] && empty($validated['paid_date'])) {
+            // Si is_paid est true mais pas de date, utiliser la date actuelle
+            $validated['paid_date'] = now()->format('Y-m-d');
+        }
 
         $expense->update($validated);
 
@@ -265,10 +307,19 @@ class ExpenseController extends Controller
     public function destroy(Project $project, Expense $expense)
     {
         $user = Auth::user();
-        $companyId = $user->current_company_id;
+        $projectCompanyId = $project->company_id;
 
-        if ($project->company_id !== $companyId || $expense->project_id !== $project->id) {
-            abort(403, 'Accès non autorisé.');
+        // Vérifier que la dépense appartient au projet
+        if ($expense->project_id !== $project->id) {
+            abort(404, 'Dépense non trouvée dans ce projet.');
+        }
+
+        // Vérifier les permissions : Super admin ou utilisateur de l'entreprise
+        if (!$user->isSuperAdmin()) {
+            // Vérifier que l'utilisateur appartient à l'entreprise du projet
+            if (!$user->companies()->where('companies.id', $projectCompanyId)->exists()) {
+                abort(403, 'Vous n\'appartenez pas à l\'entreprise de ce projet.');
+            }
         }
 
         // Supprimer la facture si elle existe
