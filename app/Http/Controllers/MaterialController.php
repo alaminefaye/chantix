@@ -568,18 +568,18 @@ class MaterialController extends Controller
 
         // Vérifier les permissions : Super admin ou Admin de l'entreprise
         if (!$user->isSuperAdmin()) {
-            if (!$companyId) {
-                abort(403, 'Veuillez sélectionner une entreprise.');
+            // Vérifier que l'utilisateur est admin de l'entreprise du projet OU du matériau
+            $projectCompanyId = $project->company_id;
+            $materialCompanyId = $material->company_id;
+            
+            // Vérifier que le projet et le matériau appartiennent à la même entreprise
+            if ($projectCompanyId !== $materialCompanyId) {
+                abort(403, 'Le projet et le matériau doivent appartenir à la même entreprise.');
             }
             
-            // Vérifier que l'utilisateur est admin de l'entreprise
-            if (!$user->hasRoleInCompany('admin', $companyId)) {
+            // Vérifier que l'utilisateur est admin de cette entreprise
+            if (!$user->hasRoleInCompany('admin', $projectCompanyId)) {
                 abort(403, 'Seuls les administrateurs peuvent transférer des matériaux.');
-            }
-            
-            // Vérifier que le projet et le matériau appartiennent à l'entreprise
-            if ($project->company_id !== $companyId || $material->company_id !== $companyId) {
-                abort(403, 'Le projet et le matériau doivent appartenir à votre entreprise.');
             }
         }
 
@@ -614,18 +614,18 @@ class MaterialController extends Controller
 
         // Vérifier les permissions : Super admin ou Admin de l'entreprise
         if (!$user->isSuperAdmin()) {
-            if (!$companyId) {
-                abort(403, 'Veuillez sélectionner une entreprise.');
+            // Vérifier que l'utilisateur est admin de l'entreprise du projet OU du matériau
+            $projectCompanyId = $sourceProject->company_id;
+            $materialCompanyId = $material->company_id;
+            
+            // Vérifier que le projet et le matériau appartiennent à la même entreprise
+            if ($projectCompanyId !== $materialCompanyId) {
+                abort(403, 'Le projet et le matériau doivent appartenir à la même entreprise.');
             }
             
-            // Vérifier que l'utilisateur est admin de l'entreprise
-            if (!$user->hasRoleInCompany('admin', $companyId)) {
+            // Vérifier que l'utilisateur est admin de cette entreprise
+            if (!$user->hasRoleInCompany('admin', $projectCompanyId)) {
                 abort(403, 'Seuls les administrateurs peuvent transférer des matériaux.');
-            }
-            
-            // Vérifier que le projet et le matériau appartiennent à l'entreprise
-            if ($sourceProject->company_id !== $companyId || $material->company_id !== $companyId) {
-                abort(403, 'Le projet et le matériau doivent appartenir à votre entreprise.');
             }
         }
 
