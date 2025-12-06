@@ -143,15 +143,26 @@ class ReportController extends Controller
 
         $validator = Validator::make($request->all(), [
             'type' => 'required|in:journalier,hebdomadaire',
-            'report_date' => 'required|date',
-            'end_date' => 'nullable|date|after_or_equal:report_date',
+            'report_date' => 'required|date|before_or_equal:today',
+            'end_date' => 'nullable|date|after_or_equal:report_date|before_or_equal:today',
         ]);
 
         if ($validator->fails()) {
+            $errors = $validator->errors();
+            $errorMessages = [];
+            
+            foreach ($errors->all() as $error) {
+                $errorMessages[] = $error;
+            }
+            
+            $message = !empty($errorMessages) 
+                ? implode(' ', $errorMessages)
+                : 'Erreur de validation des données';
+            
             return response()->json([
                 'success' => false,
-                'message' => 'Erreur de validation',
-                'errors' => $validator->errors(),
+                'message' => $message,
+                'errors' => $errors,
             ], 422);
         }
 
@@ -161,10 +172,35 @@ class ReportController extends Controller
             ? Carbon::parse($request->input('end_date'))
             : null;
 
+        \Log::info('Génération de rapport', [
+            'project_id' => $projectId,
+            'type' => $type,
+            'report_date' => $reportDate->format('Y-m-d'),
+            'end_date' => $endDate ? $endDate->format('Y-m-d') : null,
+        ]);
+
         // Collecter les données
-        $data = $type === 'journalier'
-            ? $this->collectDailyData($project, $reportDate)
-            : $this->collectWeeklyData($project, $reportDate, $endDate);
+        try {
+            $data = $type === 'journalier'
+                ? $this->collectDailyData($project, $reportDate)
+                : $this->collectWeeklyData($project, $reportDate, $endDate);
+            
+            \Log::info('Données collectées', [
+                'attendances_count' => $data['attendances']->count(),
+                'expenses_count' => $data['expenses']->count(),
+                'tasks_count' => $data['tasks']->count(),
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Erreur lors de la collecte des données', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la collecte des données: ' . $e->getMessage(),
+            ], 500);
+        }
 
         // Générer le PDF
         try {
