@@ -98,6 +98,13 @@ class ProjectEmployeeController extends Controller
 
         $employee = Employee::find($validator->validated()['employee_id']);
 
+        if (!$employee) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Employé non trouvé.',
+            ], 404);
+        }
+
         if ($employee->company_id !== $companyId && !$user->isSuperAdmin()) {
             return response()->json([
                 'success' => false,
