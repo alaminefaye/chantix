@@ -216,10 +216,14 @@ class ExpenseController extends Controller
 
         $expense = Expense::create($data);
 
-        // Envoyer des notifications push aux utilisateurs concernés
+        // Envoyer des notifications push aux utilisateurs concernés (en arrière-plan pour ne pas bloquer)
         try {
             $pushService = new PushNotificationService();
             $amount = number_format($data['amount'], 0, ',', ' ') . ' FCFA';
+            
+            // Recharger le projet pour s'assurer d'avoir toutes les données
+            $project->refresh();
+            
             $pushService->notifyProjectStakeholders(
                 $project,
                 'expense_created',
@@ -235,10 +239,15 @@ class ExpenseController extends Controller
             );
         } catch (\Exception $e) {
             // Ne pas faire échouer la création de la dépense si l'envoi de notification échoue
-            \Log::warning("Failed to send expense creation notification: " . $e->getMessage());
+            \Log::warning("Failed to send expense creation notification: " . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
         }
 
-        return response()->json($expense->load(['project', 'creator', 'material', 'employee']), 201);
+        return response()->json([
+            'success' => true,
+            'data' => $expense->load(['project', 'creator', 'material', 'employee']),
+        ], 201);
     }
 
     /**
@@ -313,10 +322,17 @@ class ExpenseController extends Controller
 
         $expense->update($data);
 
-        // Envoyer des notifications push aux utilisateurs concernés
+        // Recharger les relations
+        $expense->load(['project', 'creator', 'material', 'employee']);
+
+        // Envoyer des notifications push aux utilisateurs concernés (en arrière-plan pour ne pas bloquer)
         try {
             $pushService = new PushNotificationService();
             $amount = number_format($data['amount'], 0, ',', ' ') . ' FCFA';
+            
+            // Recharger le projet pour s'assurer d'avoir toutes les données
+            $expense->project->refresh();
+            
             $pushService->notifyProjectStakeholders(
                 $expense->project,
                 'expense_updated',
@@ -332,10 +348,15 @@ class ExpenseController extends Controller
             );
         } catch (\Exception $e) {
             // Ne pas faire échouer la modification de la dépense si l'envoi de notification échoue
-            \Log::warning("Failed to send expense update notification: " . $e->getMessage());
+            \Log::warning("Failed to send expense update notification: " . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
         }
 
-        return response()->json($expense->load(['project', 'creator', 'material', 'employee']), 200);
+        return response()->json([
+            'success' => true,
+            'data' => $expense,
+        ], 200);
     }
 
     /**

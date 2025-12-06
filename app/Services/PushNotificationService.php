@@ -63,6 +63,10 @@ class PushNotificationService
      */
     public function sendToUsers(array $userIds, $title, $body, $data = [])
     {
+        if (empty($userIds)) {
+            return false;
+        }
+
         if (!$this->messaging) {
             Log::warning('Firebase messaging not initialized');
             return false;
@@ -75,7 +79,9 @@ class PushNotificationService
 
         if (empty($tokens)) {
             Log::info("No active FCM tokens found for users: " . implode(', ', $userIds));
-            return false;
+            // Ne pas retourner false ici, car les notifications en base ont été créées
+            // On retourne true pour indiquer que le processus s'est bien déroulé
+            return true;
         }
 
         return $this->sendToTokens($tokens, $title, $body, $data);
