@@ -11,7 +11,7 @@
         <div class="card mb-0">
           <div class="card-body">
             <a href="{{ route('dashboard') }}" class="text-nowrap logo-img text-center d-block py-3 w-100">
-              <img src="{{ asset('assets/images/logos/dark-logo.png') }}" style="max-width: 120px; height: auto; object-fit: contain;" alt="Chantix Logo">
+              <img src="{{ asset('assets/images/logos/dark-logo.png') }}" style="max-width: 80px; height: auto; object-fit: contain;" alt="Chantix Logo">
             </a>
             <p class="text-center">Réinitialiser votre mot de passe</p>
             <form method="POST" action="{{ route('password.update') }}">
