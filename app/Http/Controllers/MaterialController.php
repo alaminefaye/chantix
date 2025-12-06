@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Material;
 use App\Models\Project;
 use App\Models\ProjectMaterial;
+use App\Models\StockMovement;
+use App\Services\StockService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -157,6 +159,26 @@ class MaterialController extends Controller
     }
 
     /**
+     * Afficher les mouvements de stock d'un matériau
+     */
+    public function stockMovements(Material $material, Request $request)
+    {
+        $user = Auth::user();
+        $companyId = $user->current_company_id;
+
+        if ($material->company_id !== $companyId) {
+            abort(403, 'Accès non autorisé.');
+        }
+
+        $movements = StockMovement::where('material_id', $material->id)
+            ->with(['project', 'user'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(20);
+
+        return view('materials.stock-movements', compact('material', 'movements'));
+    }
+
+    /**
      * Show the form for editing the specified resource.
      */
     public function edit(Material $material)
@@ -292,24 +314,48 @@ class MaterialController extends Controller
             ->where('material_id', $material->id)
             ->firstOrFail();
 
-        if (isset($validated['quantity_ordered'])) {
-            $projectMaterial->quantity_ordered = $validated['quantity_ordered'];
-        }
-        if (isset($validated['quantity_delivered'])) {
-            $projectMaterial->quantity_delivered = $validated['quantity_delivered'];
-        }
-        if (isset($validated['quantity_used'])) {
-            $projectMaterial->quantity_used = $validated['quantity_used'];
-        }
-        if (isset($validated['notes'])) {
-            $projectMaterial->notes = $validated['notes'];
-        }
+        $stockService = new StockService();
 
-        $projectMaterial->calculateRemaining();
-        $projectMaterial->save();
+        DB::beginTransaction();
+        try {
+            // Sauvegarder les anciennes valeurs pour calculer les différences
+            $oldDelivered = $projectMaterial->quantity_delivered;
+            $oldUsed = $projectMaterial->quantity_used;
 
-        return redirect()->back()
-            ->with('success', 'Quantités mises à jour avec succès.');
+            if (isset($validated['quantity_ordered'])) {
+                $projectMaterial->quantity_ordered = $validated['quantity_ordered'];
+            }
+            if (isset($validated['quantity_delivered'])) {
+                $projectMaterial->quantity_delivered = $validated['quantity_delivered'];
+            }
+            if (isset($validated['quantity_used'])) {
+                $projectMaterial->quantity_used = $validated['quantity_used'];
+            }
+            if (isset($validated['notes'])) {
+                $projectMaterial->notes = $validated['notes'];
+            }
+
+            // Mettre à jour le stock si les quantités ont changé
+            if (isset($validated['quantity_delivered']) && $validated['quantity_delivered'] != $oldDelivered) {
+                $stockService->handleDelivery($projectMaterial, $validated['quantity_delivered'], $oldDelivered);
+            }
+
+            if (isset($validated['quantity_used']) && $validated['quantity_used'] != $oldUsed) {
+                $stockService->handleUsage($projectMaterial, $validated['quantity_used'], $oldUsed);
+            }
+
+            $projectMaterial->calculateRemaining();
+            $projectMaterial->save();
+
+            DB::commit();
+
+            return redirect()->back()
+                ->with('success', 'Quantités mises à jour avec succès. Le stock a été mis à jour automatiquement.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()
+                ->with('error', 'Erreur lors de la mise à jour: ' . $e->getMessage());
+        }
     }
 
     /**

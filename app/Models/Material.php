@@ -50,6 +50,14 @@ class Material extends Model
     }
 
     /**
+     * Les mouvements de stock de ce matériau
+     */
+    public function stockMovements()
+    {
+        return $this->hasMany(StockMovement::class);
+    }
+
+    /**
      * Vérifier si le stock est faible
      */
     public function isLowStock()

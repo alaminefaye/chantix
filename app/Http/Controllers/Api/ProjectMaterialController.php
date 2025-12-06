@@ -5,8 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Project;
 use App\Models\Material;
+use App\Models\ProjectMaterial;
+use App\Services\StockService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class ProjectMaterialController extends Controller
@@ -187,16 +190,44 @@ class ProjectMaterialController extends Controller
 
         $data = $validator->validated();
         
-        // Calculer la quantité restante
-        if (isset($data['quantity_delivered']) || isset($data['quantity_used'])) {
-            $quantityDelivered = $data['quantity_delivered'] ?? $material->pivot->quantity_delivered;
-            $quantityUsed = $data['quantity_used'] ?? $material->pivot->quantity_used;
-            $data['quantity_remaining'] = max(0, $quantityDelivered - $quantityUsed);
-        }
+        // Récupérer le ProjectMaterial pour gérer les stocks
+        $projectMaterial = ProjectMaterial::where('project_id', $projectId)
+            ->where('material_id', $materialId)
+            ->firstOrFail();
 
-        $project->materials()->updateExistingPivot($materialId, $data);
+        $stockService = new StockService();
 
-        $updatedMaterial = $project->materials()->where('materials.id', $materialId)->first();
+        DB::beginTransaction();
+        try {
+            // Sauvegarder les anciennes valeurs AVANT la mise à jour
+            $oldDelivered = $projectMaterial->quantity_delivered;
+            $oldUsed = $projectMaterial->quantity_used;
+
+            // Calculer la quantité restante
+            if (isset($data['quantity_delivered']) || isset($data['quantity_used'])) {
+                $quantityDelivered = $data['quantity_delivered'] ?? $projectMaterial->quantity_delivered;
+                $quantityUsed = $data['quantity_used'] ?? $projectMaterial->quantity_used;
+                $data['quantity_remaining'] = max(0, $quantityDelivered - $quantityUsed);
+            }
+
+            // Mettre à jour les quantités dans la table pivot
+            $project->materials()->updateExistingPivot($materialId, $data);
+
+            // Recharger le ProjectMaterial pour avoir les nouvelles valeurs
+            $projectMaterial->refresh();
+
+            // Mettre à jour le stock si les quantités ont changé
+            if (isset($data['quantity_delivered']) && $data['quantity_delivered'] != $oldDelivered) {
+                $stockService->handleDelivery($projectMaterial, $data['quantity_delivered'], $oldDelivered);
+            }
+
+            if (isset($data['quantity_used']) && $data['quantity_used'] != $oldUsed) {
+                $stockService->handleUsage($projectMaterial, $data['quantity_used'], $oldUsed);
+            }
+
+            DB::commit();
+
+            $updatedMaterial = $project->materials()->where('materials.id', $materialId)->first();
 
         // Formater les données
         $formattedData = [
@@ -209,11 +240,18 @@ class ProjectMaterialController extends Controller
             'notes' => $updatedMaterial->pivot->notes,
         ];
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Matériau mis à jour avec succès.',
-            'data' => $formattedData,
-        ], 200);
+            return response()->json([
+                'success' => true,
+                'message' => 'Matériau mis à jour avec succès. Le stock a été mis à jour automatiquement.',
+                'data' => $formattedData,
+            ], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la mise à jour: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**

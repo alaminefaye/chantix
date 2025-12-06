@@ -93,6 +93,7 @@ Route::middleware(['auth', 'verified', 'company'])->group(function () {
     Route::get('/materials/import', [\App\Http\Controllers\MaterialController::class, 'showImport'])->name('materials.import');
     Route::post('/materials/import', [\App\Http\Controllers\MaterialController::class, 'import'])->name('materials.import.store');
     Route::get('/materials/template/download', [\App\Http\Controllers\MaterialController::class, 'downloadTemplate'])->name('materials.template.download');
+    Route::get('/materials/{material}/stock-movements', [\App\Http\Controllers\MaterialController::class, 'stockMovements'])->name('materials.stock-movements');
     Route::post('/projects/{project}/materials/add', [\App\Http\Controllers\MaterialController::class, 'addToProject'])->name('projects.materials.add');
     Route::put('/projects/{project}/materials/{material}/update', [\App\Http\Controllers\MaterialController::class, 'updateProjectMaterial'])->name('projects.materials.update');
     Route::get('/projects/{project}/materials/{material}/transfer', [\App\Http\Controllers\MaterialController::class, 'showTransfer'])->name('projects.materials.transfer');
