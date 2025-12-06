@@ -453,10 +453,10 @@ class InvitationController extends Controller
             abort(403, 'Seuls les administrateurs peuvent modifier des invitations.');
         }
 
-        // Seules les invitations en attente peuvent être modifiées
-        if ($invitation->status !== 'pending' || $invitation->isExpired()) {
+        // Les invitations expirées ne peuvent pas être modifiées
+        if ($invitation->isExpired()) {
             return redirect()->route('invitations.index', $company)
-                ->with('error', 'Seules les invitations en attente peuvent être modifiées.');
+                ->with('error', 'Cette invitation a expiré et ne peut plus être modifiée.');
         }
 
         $validated = $request->validate([
@@ -503,7 +503,30 @@ class InvitationController extends Controller
             }
         }
 
+        $oldProjectId = $invitation->project_id;
         $invitation->update($validated);
+
+        // Si l'invitation a été acceptée, mettre à jour l'association projet de l'utilisateur
+        if ($invitation->status === 'accepted') {
+            $invitedUser = User::where('email', $invitation->email)->first();
+            if ($invitedUser) {
+                // Retirer l'ancien projet si nécessaire
+                if ($oldProjectId) {
+                    $oldProject = \App\Models\Project::find($oldProjectId);
+                    if ($oldProject) {
+                        $oldProject->users()->detach($invitedUser->id);
+                    }
+                }
+                
+                // Ajouter le nouveau projet si un projet est spécifié
+                if ($validated['project_id']) {
+                    $newProject = \App\Models\Project::find($validated['project_id']);
+                    if ($newProject && !$newProject->users()->where('users.id', $invitedUser->id)->exists()) {
+                        $newProject->users()->attach($invitedUser->id);
+                    }
+                }
+            }
+        }
 
         return redirect()->route('invitations.index', $company)
             ->with('success', 'Invitation modifiée avec succès.');

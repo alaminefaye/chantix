@@ -32,6 +32,14 @@
           </div>
         @endif
 
+        @if($invitation->status === 'accepted')
+          <div class="alert alert-info alert-dismissible fade show" role="alert">
+            <i class="ti ti-info-circle me-2"></i>
+            <strong>Invitation acceptée :</strong> La modification du projet mettra à jour automatiquement l'association de l'utilisateur avec les projets.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        @endif
+
         <form action="{{ route('invitations.update', ['company' => $company, 'invitation' => $invitation]) }}" method="POST">
           @csrf
           @method('PUT')
@@ -40,7 +48,12 @@
             <div class="col-md-6">
               <div class="mb-3">
                 <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
-                <input type="email" class="form-control @error('email') is-invalid @enderror" id="email" name="email" value="{{ old('email', $invitation->email) }}" required>
+                @if($invitation->status === 'accepted')
+                  <input type="email" class="form-control @error('email') is-invalid @enderror" id="email" name="email" value="{{ old('email', $invitation->email) }}" required readonly>
+                  <small class="text-muted">L'email ne peut pas être modifié pour une invitation acceptée.</small>
+                @else
+                  <input type="email" class="form-control @error('email') is-invalid @enderror" id="email" name="email" value="{{ old('email', $invitation->email) }}" required>
+                @endif
                 @error('email')
                   <div class="invalid-feedback">{{ $message }}</div>
                 @enderror
