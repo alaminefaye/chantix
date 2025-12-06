@@ -45,7 +45,9 @@ class CommentController extends Controller
 
         $query = Comment::forProject($projectId)
             ->main()
-            ->with(['user', 'replies.user']);
+            ->with(['user', 'replies' => function($q) {
+                $q->with('user')->orderBy('created_at', 'asc');
+            }]);
 
         // Tri
         $sortBy = $request->get('sort_by', 'created_at');
@@ -134,9 +136,11 @@ class CommentController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'content' => 'nullable|string|max:5000',
+            'content' => 'required_without:attachments|nullable|string|max:5000',
             'parent_id' => 'nullable|exists:comments,id',
             'attachments.*' => 'nullable|file|mimes:jpg,jpeg,png,gif,pdf,doc,docx|max:10240',
+        ], [
+            'content.required_without' => 'Le contenu ou une pièce jointe est requis.',
         ]);
 
         if ($validator->fails()) {
@@ -172,6 +176,14 @@ class CommentController extends Controller
             }
         }
 
+        // Vérifier qu'il y a au moins du contenu ou des pièces jointes
+        if (empty($request->input('content')) && empty($attachments)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Le contenu ou une pièce jointe est requis.',
+            ], 422);
+        }
+
         // Extraire les mentions
         $mentionedUsers = $this->extractMentions(
             $request->input('content', ''),
@@ -187,7 +199,12 @@ class CommentController extends Controller
             'attachments' => !empty($attachments) ? $attachments : null,
         ]);
 
-        return response()->json($comment->load(['user', 'replies.user']), 201);
+        // Recharger avec toutes les relations
+        $comment->load(['user', 'replies' => function($q) {
+            $q->with('user')->orderBy('created_at', 'asc');
+        }]);
+
+        return response()->json($comment, 201);
     }
 
     /**

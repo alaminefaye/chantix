@@ -226,7 +226,7 @@ class ProjectController extends Controller
                 'date' => $update->created_at,
                 'title' => 'Mise à jour d\'avancement',
                 'description' => $update->description,
-                'user' => $update->user->name,
+                'user' => $update->user ? $update->user->name : 'Utilisateur inconnu',
                 'data' => $update,
             ]);
         }
@@ -250,19 +250,19 @@ class ProjectController extends Controller
                 'date' => $expense->created_at,
                 'title' => 'Dépense: ' . $expense->title,
                 'description' => number_format($expense->amount, 2, ',', ' ') . ' €',
-                'user' => $expense->creator->name,
+                'user' => $expense->creator ? $expense->creator->name : 'Utilisateur inconnu',
                 'data' => $expense,
             ]);
         }
 
-        // Commentaires
-        foreach ($project->allComments()->with('user')->orderBy('created_at', 'desc')->get() as $comment) {
+        // Commentaires (seulement les commentaires principaux, pas les réponses)
+        foreach ($project->comments()->with('user')->orderBy('created_at', 'desc')->get() as $comment) {
             $events->push([
                 'type' => 'comment',
                 'date' => $comment->created_at,
                 'title' => 'Commentaire',
                 'description' => $comment->content,
-                'user' => $comment->user->name,
+                'user' => $comment->user ? $comment->user->name : 'Utilisateur inconnu',
                 'data' => $comment,
             ]);
         }

@@ -24,7 +24,9 @@ class CommentController extends Controller
         }
 
         $comments = $project->comments()
-            ->with(['user', 'replies.user'])
+            ->with(['user', 'replies' => function($query) {
+                $query->with('user')->orderBy('created_at', 'asc');
+            }])
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -49,9 +51,11 @@ class CommentController extends Controller
         }
 
         $validated = $request->validate([
-            'content' => 'nullable|string|max:5000',
+            'content' => 'required_without:attachments|nullable|string|max:5000',
             'parent_id' => 'nullable|exists:comments,id',
             'attachments.*' => 'nullable|file|mimes:jpg,jpeg,png,gif,pdf,doc,docx|max:10240',
+        ], [
+            'content.required_without' => 'Le contenu ou une pièce jointe est requis.',
         ]);
 
         // Upload des pièces jointes
@@ -68,6 +72,12 @@ class CommentController extends Controller
             }
         }
 
+        // Vérifier qu'il y a au moins du contenu ou des pièces jointes
+        if (empty($validated['content']) && empty($attachments)) {
+            return redirect()->route('comments.index', $project)
+                ->with('error', 'Le contenu ou une pièce jointe est requis.');
+        }
+
         // Extraire les mentions
         $mentionedUsers = $this->extractMentions($validated['content'] ?? '', $project);
 
@@ -79,6 +89,9 @@ class CommentController extends Controller
             'mentioned_users' => $mentionedUsers,
             'attachments' => !empty($attachments) ? $attachments : null,
         ]);
+        
+        // Recharger les relations
+        $comment->load('user', 'replies.user');
 
         // Envoyer des notifications aux utilisateurs mentionnés
         if (!empty($mentionedUsers)) {

@@ -21,6 +21,24 @@
           </div>
         @endif
 
+        @if(session('error'))
+          <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            {{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        @endif
+
+        @if($errors->any())
+          <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <ul class="mb-0">
+              @foreach($errors->all() as $error)
+                <li>{{ $error }}</li>
+              @endforeach
+            </ul>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        @endif
+
         <!-- Formulaire de nouveau commentaire -->
         <div class="card bg-light mb-4">
           <div class="card-body">
@@ -142,7 +160,7 @@
                 </button>
 
                 <div class="reply-form mt-3" id="reply-form-{{ $comment->id }}" style="display: none;">
-                  <form action="{{ route('comments.store', $project) }}" method="POST">
+                  <form action="{{ route('comments.store', $project) }}" method="POST" class="reply-form-submit" data-comment-id="{{ $comment->id }}">
                     @csrf
                     <input type="hidden" name="parent_id" value="{{ $comment->id }}">
                     <div class="mb-2">
