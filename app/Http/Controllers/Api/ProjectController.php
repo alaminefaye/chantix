@@ -75,7 +75,15 @@ class ProjectController extends Controller
         }
 
         $project = Project::forCompany($companyId)
-            ->with(['creator', 'company'])
+            ->with([
+                'creator', 
+                'company',
+                'materials',
+                'employees',
+                'tasks' => function($query) {
+                    $query->orderBy('created_at', 'desc')->limit(10);
+                },
+            ])
             ->find($id);
 
         if (!$project) {
