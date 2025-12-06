@@ -173,6 +173,9 @@ class ReportController extends Controller
                 'data' => $data,
             ];
             
+            // Mapper le type de rapport vers le nom de la vue
+            $viewName = ($type === 'journalier') ? 'daily' : 'weekly';
+            
             // Adapter les variables selon le type de rapport
             if ($type === 'journalier') {
                 $viewData['date'] = $reportDate;
@@ -181,7 +184,7 @@ class ReportController extends Controller
                 $viewData['endDate'] = $endDate;
             }
             
-            $pdf = Pdf::loadView('reports.pdf.' . $type, $viewData);
+            $pdf = Pdf::loadView('reports.pdf.' . $viewName, $viewData);
 
             $filename = 'rapport-' . $type . '-' . $project->name . '-' . $reportDate->format('Y-m-d') . '.pdf';
             $filePath = 'reports/' . $filename;
