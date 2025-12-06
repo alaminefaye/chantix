@@ -97,7 +97,7 @@ class ExpenseController extends Controller
             'material_id' => 'nullable|exists:materials,id',
             'employee_id' => 'nullable|exists:employees,id',
             'notes' => 'nullable|string',
-            'is_paid' => 'boolean',
+            'is_paid' => 'nullable',
             'paid_date' => 'nullable|date',
         ]);
 
@@ -131,7 +131,17 @@ class ExpenseController extends Controller
         try {
             $validated['project_id'] = $project->id;
             $validated['created_by'] = $user->id;
-            $validated['is_paid'] = $request->has('is_paid');
+            
+            // Gérer is_paid : checkbox non cochée = false, cochée = true
+            $validated['is_paid'] = $request->has('is_paid') && ($request->input('is_paid') == '1' || $request->input('is_paid') === true);
+            
+            // Si is_paid est false, on ne doit pas avoir de paid_date
+            if (!$validated['is_paid']) {
+                $validated['paid_date'] = null;
+            } elseif ($validated['is_paid'] && empty($validated['paid_date'])) {
+                // Si is_paid est true mais pas de date, utiliser la date actuelle
+                $validated['paid_date'] = now()->format('Y-m-d');
+            }
 
             Expense::create($validated);
 
