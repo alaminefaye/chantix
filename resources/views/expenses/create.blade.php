@@ -165,7 +165,7 @@
           <div class="row">
             <div class="col-md-6 mb-3">
               <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" id="is_paid" name="is_paid" {{ old('is_paid') ? 'checked' : '' }} onchange="togglePaidDate()">
+                <input class="form-check-input" type="checkbox" id="is_paid" name="is_paid" value="1" {{ old('is_paid') ? 'checked' : '' }} onchange="togglePaidDate()">
                 <label class="form-check-label" for="is_paid">
                   Dépense payée
                 </label>

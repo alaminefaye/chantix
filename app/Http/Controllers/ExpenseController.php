@@ -137,7 +137,14 @@ class ExpenseController extends Controller
             $validated['created_by'] = $user->id;
             
             // Gérer is_paid : checkbox non cochée = false, cochée = true
-            $validated['is_paid'] = $request->has('is_paid') && ($request->input('is_paid') == '1' || $request->input('is_paid') === true);
+            // Un checkbox envoie "1" (ou "on" par défaut) quand coché, rien quand non coché
+            $isPaid = $request->has('is_paid') && (
+                $request->input('is_paid') == '1' || 
+                $request->input('is_paid') === 'on' || 
+                $request->input('is_paid') === true ||
+                $request->input('is_paid') === 'true'
+            );
+            $validated['is_paid'] = $isPaid;
             
             // Si is_paid est false, on ne doit pas avoir de paid_date
             if (!$validated['is_paid']) {
@@ -282,7 +289,14 @@ class ExpenseController extends Controller
         }
 
         // Gérer is_paid : checkbox non cochée = false, cochée = true
-        $validated['is_paid'] = $request->has('is_paid') && ($request->input('is_paid') == '1' || $request->input('is_paid') === true);
+        // Un checkbox envoie "1" (ou "on" par défaut) quand coché, rien quand non coché
+        $isPaid = $request->has('is_paid') && (
+            $request->input('is_paid') == '1' || 
+            $request->input('is_paid') === 'on' || 
+            $request->input('is_paid') === true ||
+            $request->input('is_paid') === 'true'
+        );
+        $validated['is_paid'] = $isPaid;
         
         // Si is_paid est false, on ne doit pas avoir de paid_date
         if (!$validated['is_paid']) {
