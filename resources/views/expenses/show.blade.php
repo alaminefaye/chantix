@@ -15,6 +15,15 @@
                 <i class="ti ti-edit me-2"></i>Modifier
               </a>
             @endif
+            @if(auth()->user()->isSuperAdmin() || auth()->user()->hasRoleInCompany('admin', $project->company_id) || auth()->user()->hasPermission('expenses.delete', $project->company_id))
+              <form action="{{ route('expenses.destroy', ['project' => $project, 'expense' => $expense]) }}" method="POST" class="d-inline" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette dépense ? Cette action est irréversible.');">
+                @csrf
+                @method('DELETE')
+                <button type="submit" class="btn btn-danger">
+                  <i class="ti ti-trash me-2"></i>Supprimer
+                </button>
+              </form>
+            @endif
             <a href="{{ route('expenses.index', $project) }}" class="btn btn-secondary">Retour</a>
           </div>
         </div>

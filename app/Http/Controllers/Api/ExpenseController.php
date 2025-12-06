@@ -7,6 +7,7 @@ use App\Models\Expense;
 use App\Models\Project;
 use App\Models\Material;
 use App\Models\Employee;
+use App\Services\PushNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -215,6 +216,28 @@ class ExpenseController extends Controller
 
         $expense = Expense::create($data);
 
+        // Envoyer des notifications push aux utilisateurs concernés
+        try {
+            $pushService = new PushNotificationService();
+            $amount = number_format($data['amount'], 0, ',', ' ') . ' FCFA';
+            $pushService->notifyProjectStakeholders(
+                $project,
+                'expense_created',
+                'Nouvelle dépense créée',
+                "Une nouvelle dépense a été créée pour le projet \"{$project->name}\" : {$data['title']} ({$amount})",
+                [
+                    'expense_id' => $expense->id,
+                    'expense_title' => $data['title'],
+                    'expense_amount' => $data['amount'],
+                    'expense_type' => $data['type'],
+                ],
+                $user->id // Exclure l'utilisateur qui a créé la dépense
+            );
+        } catch (\Exception $e) {
+            // Ne pas faire échouer la création de la dépense si l'envoi de notification échoue
+            \Log::warning("Failed to send expense creation notification: " . $e->getMessage());
+        }
+
         return response()->json($expense->load(['project', 'creator', 'material', 'employee']), 201);
     }
 
@@ -289,6 +312,28 @@ class ExpenseController extends Controller
         }
 
         $expense->update($data);
+
+        // Envoyer des notifications push aux utilisateurs concernés
+        try {
+            $pushService = new PushNotificationService();
+            $amount = number_format($data['amount'], 0, ',', ' ') . ' FCFA';
+            $pushService->notifyProjectStakeholders(
+                $expense->project,
+                'expense_updated',
+                'Dépense modifiée',
+                "Une dépense a été modifiée pour le projet \"{$expense->project->name}\" : {$data['title']} ({$amount})",
+                [
+                    'expense_id' => $expense->id,
+                    'expense_title' => $data['title'],
+                    'expense_amount' => $data['amount'],
+                    'expense_type' => $data['type'],
+                ],
+                $user->id // Exclure l'utilisateur qui a modifié la dépense
+            );
+        } catch (\Exception $e) {
+            // Ne pas faire échouer la modification de la dépense si l'envoi de notification échoue
+            \Log::warning("Failed to send expense update notification: " . $e->getMessage());
+        }
 
         return response()->json($expense->load(['project', 'creator', 'material', 'employee']), 200);
     }

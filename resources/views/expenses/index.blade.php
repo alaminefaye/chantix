@@ -164,9 +164,22 @@
                   </td>
                   <td class="border-bottom-0">
                     <div class="d-flex align-items-center gap-2">
-                      <a href="{{ route('expenses.show', ['project' => $project, 'expense' => $expense]) }}" class="btn btn-sm btn-info">Voir</a>
+                      <a href="{{ route('expenses.show', ['project' => $project, 'expense' => $expense]) }}" class="btn btn-sm btn-info">
+                        <i class="ti ti-eye"></i> Voir
+                      </a>
                       @if(auth()->user()->isSuperAdmin() || auth()->user()->hasRoleInCompany('admin', $project->company_id) || auth()->user()->hasPermission('expenses.update', $project->company_id))
-                        <a href="{{ route('expenses.edit', ['project' => $project, 'expense' => $expense]) }}" class="btn btn-sm btn-warning">Modifier</a>
+                        <a href="{{ route('expenses.edit', ['project' => $project, 'expense' => $expense]) }}" class="btn btn-sm btn-warning">
+                          <i class="ti ti-edit"></i> Modifier
+                        </a>
+                      @endif
+                      @if(auth()->user()->isSuperAdmin() || auth()->user()->hasRoleInCompany('admin', $project->company_id) || auth()->user()->hasPermission('expenses.delete', $project->company_id))
+                        <form action="{{ route('expenses.destroy', ['project' => $project, 'expense' => $expense]) }}" method="POST" class="d-inline" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette dépense ? Cette action est irréversible.');">
+                          @csrf
+                          @method('DELETE')
+                          <button type="submit" class="btn btn-sm btn-danger">
+                            <i class="ti ti-trash"></i> Supprimer
+                          </button>
+                        </form>
                       @endif
                     </div>
                   </td>
