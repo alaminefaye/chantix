@@ -123,8 +123,13 @@ class Expense extends Model
     {
         $field = $field ?: $this->getRouteKeyName();
         
-        // Si on est dans un contexte de projet (via la route), on peut vérifier le project_id
-        // Sinon, on fait une recherche normale par ID
-        return $this->where($field, $value)->first();
+        // Recherche normale par ID (par défaut)
+        $query = $this->where($field, $value);
+        
+        // Si un project_id est disponible dans la requête (via la route parente),
+        // on peut l'utiliser pour une recherche plus précise
+        // Mais on ne le fait pas ici car le contrôleur vérifie déjà cette relation
+        
+        return $query->first();
     }
 }
