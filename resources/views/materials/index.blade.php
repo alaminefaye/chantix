@@ -43,6 +43,50 @@
           </div>
         @endif
 
+        <!-- Formulaire de recherche et filtres -->
+        <div class="card mb-4">
+          <div class="card-body">
+            <form method="GET" action="{{ route('materials.index') }}" class="row g-3">
+              <div class="col-md-4">
+                <label for="search" class="form-label">Rechercher</label>
+                <input type="text" 
+                       class="form-control" 
+                       id="search" 
+                       name="search" 
+                       placeholder="Nom, catégorie, fournisseur..." 
+                       value="{{ $search ?? '' }}">
+              </div>
+              <div class="col-md-3">
+                <label for="status" class="form-label">Statut</label>
+                <select class="form-select" id="status" name="status">
+                  <option value="">Tous</option>
+                  <option value="active" {{ ($status ?? '') === 'active' ? 'selected' : '' }}>Actif</option>
+                  <option value="inactive" {{ ($status ?? '') === 'inactive' ? 'selected' : '' }}>Inactif</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label for="stock_filter" class="form-label">Stock</label>
+                <select class="form-select" id="stock_filter" name="stock_filter">
+                  <option value="">Tous</option>
+                  <option value="low_stock" {{ ($stockFilter ?? '') === 'low_stock' ? 'selected' : '' }}>Stock faible</option>
+                </select>
+              </div>
+              <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                  <i class="ti ti-search me-2"></i>Rechercher
+                </button>
+              </div>
+              @if($search || $status || $stockFilter)
+                <div class="col-12">
+                  <a href="{{ route('materials.index') }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="ti ti-x me-1"></i>Réinitialiser les filtres
+                  </a>
+                </div>
+              @endif
+            </form>
+          </div>
+        </div>
+
         <div class="table-responsive">
           <table class="table text-nowrap mb-0 align-middle">
             <thead class="text-dark fs-4">

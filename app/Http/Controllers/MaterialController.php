@@ -16,7 +16,7 @@ class MaterialController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
         $companyId = $user->current_company_id;
@@ -31,10 +31,41 @@ class MaterialController extends Controller
             abort(403, 'Vous n\'avez pas la permission d\'accéder à la gestion des matériaux.');
         }
 
-        $materials = Material::forCompany($companyId)
-            ->with('company')
-            ->orderBy('name')
-            ->paginate(20);
+        // Récupérer les paramètres de recherche et filtrage
+        $search = $request->get('search', '');
+        $status = $request->get('status', '');
+        $stockFilter = $request->get('stock_filter', '');
+
+        // Construire la requête
+        $query = Material::forCompany($companyId)
+            ->with('company');
+
+        // Appliquer la recherche
+        if (!empty($search)) {
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%')
+                  ->orWhere('category', 'like', '%' . $search . '%')
+                  ->orWhere('supplier', 'like', '%' . $search . '%')
+                  ->orWhere('description', 'like', '%' . $search . '%');
+            });
+        }
+
+        // Appliquer le filtre de statut
+        if ($status === 'active') {
+            $query->where('is_active', true);
+        } elseif ($status === 'inactive') {
+            $query->where('is_active', false);
+        }
+
+        // Appliquer le filtre de stock
+        if ($stockFilter === 'low_stock') {
+            $query->whereRaw('stock_quantity <= min_stock');
+        }
+
+        // Paginer avec 10 éléments par page et conserver les paramètres de recherche
+        $materials = $query->orderBy('name')
+            ->paginate(10)
+            ->appends($request->query());
 
         // Compter les matériaux avec stock faible
         $lowStockCount = Material::forCompany($companyId)
@@ -43,7 +74,7 @@ class MaterialController extends Controller
             ->filter(fn($material) => $material->isLowStock())
             ->count();
 
-        return view('materials.index', compact('materials', 'lowStockCount'));
+        return view('materials.index', compact('materials', 'lowStockCount', 'search', 'status', 'stockFilter'));
     }
 
     /**
