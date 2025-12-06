@@ -166,6 +166,15 @@
                       @if(auth()->user()->isSuperAdmin() || auth()->user()->hasRoleInCompany('admin', $material->company_id) || auth()->user()->hasPermission('materials.manage', $material->company_id))
                         <a href="{{ route('materials.edit', $material) }}" class="btn btn-sm btn-warning">Modifier</a>
                       @endif
+                      @if(auth()->user()->isSuperAdmin() || auth()->user()->hasRoleInCompany('admin', $material->company_id))
+                        <form action="{{ route('materials.destroy', $material) }}" method="POST" class="d-inline" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce matériau ? Cette action est irréversible.');">
+                          @csrf
+                          @method('DELETE')
+                          <button type="submit" class="btn btn-sm btn-danger">
+                            <i class="ti ti-trash me-1"></i>Supprimer
+                          </button>
+                        </form>
+                      @endif
                     </div>
                   </td>
                 </tr>

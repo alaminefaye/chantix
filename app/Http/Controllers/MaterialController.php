@@ -238,6 +238,11 @@ class MaterialController extends Controller
             abort(403, 'Accès non autorisé.');
         }
 
+        // Vérifier que seul un administrateur peut supprimer
+        if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $companyId)) {
+            abort(403, 'Seuls les administrateurs peuvent supprimer des matériaux.');
+        }
+
         // Vérifier si le matériau est utilisé dans des projets
         if ($material->projects()->count() > 0) {
             return redirect()->route('materials.index')
