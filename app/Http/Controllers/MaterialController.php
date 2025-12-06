@@ -566,8 +566,21 @@ class MaterialController extends Controller
             abort(404, 'Matériau non trouvé.');
         }
 
-        if ($project->company_id !== $companyId || $material->company_id !== $companyId) {
-            abort(403, 'Accès non autorisé.');
+        // Vérifier les permissions : Super admin ou Admin de l'entreprise
+        if (!$user->isSuperAdmin()) {
+            if (!$companyId) {
+                abort(403, 'Veuillez sélectionner une entreprise.');
+            }
+            
+            // Vérifier que l'utilisateur est admin de l'entreprise
+            if (!$user->hasRoleInCompany('admin', $companyId)) {
+                abort(403, 'Seuls les administrateurs peuvent transférer des matériaux.');
+            }
+            
+            // Vérifier que le projet et le matériau appartiennent à l'entreprise
+            if ($project->company_id !== $companyId || $material->company_id !== $companyId) {
+                abort(403, 'Le projet et le matériau doivent appartenir à votre entreprise.');
+            }
         }
 
         // Vérifier que le matériau est dans le projet
@@ -599,8 +612,21 @@ class MaterialController extends Controller
             abort(404, 'Matériau non trouvé.');
         }
 
-        if ($sourceProject->company_id !== $companyId || $material->company_id !== $companyId) {
-            abort(403, 'Accès non autorisé.');
+        // Vérifier les permissions : Super admin ou Admin de l'entreprise
+        if (!$user->isSuperAdmin()) {
+            if (!$companyId) {
+                abort(403, 'Veuillez sélectionner une entreprise.');
+            }
+            
+            // Vérifier que l'utilisateur est admin de l'entreprise
+            if (!$user->hasRoleInCompany('admin', $companyId)) {
+                abort(403, 'Seuls les administrateurs peuvent transférer des matériaux.');
+            }
+            
+            // Vérifier que le projet et le matériau appartiennent à l'entreprise
+            if ($sourceProject->company_id !== $companyId || $material->company_id !== $companyId) {
+                abort(403, 'Le projet et le matériau doivent appartenir à votre entreprise.');
+            }
         }
 
         $validated = $request->validate([
