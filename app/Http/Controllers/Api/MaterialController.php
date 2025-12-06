@@ -130,18 +130,23 @@ class MaterialController extends Controller
         $material = Material::create($data);
 
         // Créer et envoyer une notification push aux utilisateurs de l'entreprise
-        $pushService = new PushNotificationService();
-        $pushService->createAndSendToCompany(
-            $companyId,
-            'material_created',
-            'Nouveau matériau ajouté',
-            "Le matériau {$material->name} a été ajouté au stock.",
-            null,
-            [
-                'material_id' => $material->id,
-                'material_name' => $material->name,
-            ]
-        );
+        try {
+            $pushService = new PushNotificationService();
+            $pushService->createAndSendToCompany(
+                $companyId,
+                'material_created',
+                'Nouveau matériau ajouté',
+                "Le matériau {$material->name} a été ajouté au stock.",
+                null,
+                [
+                    'material_id' => $material->id,
+                    'material_name' => $material->name,
+                ]
+            );
+        } catch (\Exception $e) {
+            // Log l'erreur mais ne fait pas échouer la création du matériau
+            \Log::warning('Erreur lors de l\'envoi de la notification push pour le matériau: ' . $e->getMessage());
+        }
 
         return response()->json($material, 201);
     }
@@ -200,76 +205,81 @@ class MaterialController extends Controller
         $material->update($validator->validated());
 
         // Envoyer des notifications push pour les mises à jour de stock
-        $pushService = new PushNotificationService();
-        
-        // Vérifier si le stock a changé
-        if ($request->has('stock_quantity') && $request->stock_quantity != $oldStockQuantity) {
-            $newStockQuantity = $request->stock_quantity;
-            $stockChange = $newStockQuantity - $oldStockQuantity;
+        try {
+            $pushService = new PushNotificationService();
             
-            if ($stockChange > 0) {
-                // Stock augmenté
-                $pushService->createAndSendToCompany(
-                    $companyId,
-                    'material_stock_increased',
-                    'Stock mis à jour',
-                    "Le stock de {$material->name} a été augmenté de {$stockChange} {$material->unit}. Nouveau stock: {$newStockQuantity} {$material->unit}.",
-                    null,
-                    [
-                        'material_id' => $material->id,
-                        'material_name' => $material->name,
-                        'old_stock' => $oldStockQuantity,
-                        'new_stock' => $newStockQuantity,
-                        'change' => $stockChange,
-                    ]
-                );
+            // Vérifier si le stock a changé
+            if ($request->has('stock_quantity') && $request->stock_quantity != $oldStockQuantity) {
+                $newStockQuantity = $request->stock_quantity;
+                $stockChange = $newStockQuantity - $oldStockQuantity;
+                
+                if ($stockChange > 0) {
+                    // Stock augmenté
+                    $pushService->createAndSendToCompany(
+                        $companyId,
+                        'material_stock_increased',
+                        'Stock mis à jour',
+                        "Le stock de {$material->name} a été augmenté de {$stockChange} {$material->unit}. Nouveau stock: {$newStockQuantity} {$material->unit}.",
+                        null,
+                        [
+                            'material_id' => $material->id,
+                            'material_name' => $material->name,
+                            'old_stock' => $oldStockQuantity,
+                            'new_stock' => $newStockQuantity,
+                            'change' => $stockChange,
+                        ]
+                    );
+                } else {
+                    // Stock diminué
+                    $pushService->createAndSendToCompany(
+                        $companyId,
+                        'material_stock_decreased',
+                        'Stock mis à jour',
+                        "Le stock de {$material->name} a été réduit de " . abs($stockChange) . " {$material->unit}. Nouveau stock: {$newStockQuantity} {$material->unit}.",
+                        null,
+                        [
+                            'material_id' => $material->id,
+                            'material_name' => $material->name,
+                            'old_stock' => $oldStockQuantity,
+                            'new_stock' => $newStockQuantity,
+                            'change' => $stockChange,
+                        ]
+                    );
+                }
+                
+                // Vérifier si le stock est faible
+                if ($newStockQuantity <= $material->min_stock) {
+                    $pushService->createAndSendToCompany(
+                        $companyId,
+                        'material_low_stock',
+                        '⚠️ Stock faible',
+                        "Attention: Le stock de {$material->name} est faible ({$newStockQuantity} {$material->unit}). Stock minimum: {$material->min_stock} {$material->unit}.",
+                        null,
+                        [
+                            'material_id' => $material->id,
+                            'material_name' => $material->name,
+                            'current_stock' => $newStockQuantity,
+                            'min_stock' => $material->min_stock,
+                        ]
+                    );
+                }
             } else {
-                // Stock diminué
+                // Autre mise à jour (nom, description, etc.)
                 $pushService->createAndSendToCompany(
                     $companyId,
-                    'material_stock_decreased',
-                    'Stock mis à jour',
-                    "Le stock de {$material->name} a été réduit de " . abs($stockChange) . " {$material->unit}. Nouveau stock: {$newStockQuantity} {$material->unit}.",
+                    'material_updated',
+                    'Matériau mis à jour',
+                    "Le matériau {$material->name} a été modifié.",
                     null,
                     [
                         'material_id' => $material->id,
                         'material_name' => $material->name,
-                        'old_stock' => $oldStockQuantity,
-                        'new_stock' => $newStockQuantity,
-                        'change' => $stockChange,
                     ]
                 );
             }
-            
-            // Vérifier si le stock est faible
-            if ($newStockQuantity <= $material->min_stock) {
-                $pushService->createAndSendToCompany(
-                    $companyId,
-                    'material_low_stock',
-                    '⚠️ Stock faible',
-                    "Attention: Le stock de {$material->name} est faible ({$newStockQuantity} {$material->unit}). Stock minimum: {$material->min_stock} {$material->unit}.",
-                    null,
-                    [
-                        'material_id' => $material->id,
-                        'material_name' => $material->name,
-                        'current_stock' => $newStockQuantity,
-                        'min_stock' => $material->min_stock,
-                    ]
-                );
-            }
-        } else {
-            // Autre mise à jour (nom, description, etc.)
-            $pushService->createAndSendToCompany(
-                $companyId,
-                'material_updated',
-                'Matériau mis à jour',
-                "Le matériau {$material->name} a été modifié.",
-                null,
-                [
-                    'material_id' => $material->id,
-                    'material_name' => $material->name,
-                ]
-            );
+        } catch (\Exception $e) {
+            // Log l'erreur mais ne fait pas échouer la mise à jour du matériau
+            \Log::warning('Erreur lors de l\'envoi de la notification push pour le matériau: ' . $e->getMessage());
         }
 
         return response()->json($material, 200);
@@ -307,17 +317,22 @@ class MaterialController extends Controller
         $material->delete();
 
         // Créer et envoyer une notification push
-        $pushService = new PushNotificationService();
-        $pushService->createAndSendToCompany(
-            $materialCompanyId,
-            'material_deleted',
-            'Matériau supprimé',
-            "Le matériau {$materialName} a été supprimé du stock.",
-            null,
-            [
-                'material_name' => $materialName,
-            ]
-        );
+        try {
+            $pushService = new PushNotificationService();
+            $pushService->createAndSendToCompany(
+                $materialCompanyId,
+                'material_deleted',
+                'Matériau supprimé',
+                "Le matériau {$materialName} a été supprimé du stock.",
+                null,
+                [
+                    'material_name' => $materialName,
+                ]
+            );
+        } catch (\Exception $e) {
+            // Log l'erreur mais ne fait pas échouer la suppression du matériau
+            \Log::warning('Erreur lors de l\'envoi de la notification push pour le matériau: ' . $e->getMessage());
+        }
 
         return response()->json([
             'success' => true,
