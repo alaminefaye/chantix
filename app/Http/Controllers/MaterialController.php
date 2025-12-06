@@ -588,8 +588,9 @@ class MaterialController extends Controller
             ->where('material_id', $material->id)
             ->firstOrFail();
 
-        // Récupérer les autres projets de l'entreprise
-        $otherProjects = Project::forCompany($companyId)
+        // Récupérer les autres projets de l'entreprise du projet source
+        $projectCompanyId = $project->company_id;
+        $otherProjects = Project::forCompany($projectCompanyId)
             ->where('id', '!=', $project->id)
             ->orderBy('name')
             ->get();
