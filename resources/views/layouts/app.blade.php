@@ -19,8 +19,9 @@
       <!-- Sidebar scroll-->
       <div>
         <div class="brand-logo d-flex align-items-center justify-content-between">
-          <a href="{{ route('dashboard') }}" class="text-nowrap logo-img">
+          <a href="{{ route('dashboard') }}" class="text-nowrap logo-img d-flex align-items-center gap-2">
             <img src="{{ asset('assets/images/logos/logo.png') }}" style="max-width: 80px; height: auto; object-fit: contain;" alt="Chantix Logo" />
+            <span class="fw-bold fs-4 text-dark" style="white-space: nowrap;">CHANTIX</span>
           </a>
           <div class="close-btn d-xl-none d-block sidebartoggler cursor-pointer" id="sidebarCollapse">
             <i class="ti ti-x fs-8"></i>
