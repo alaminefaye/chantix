@@ -219,6 +219,15 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Les projets auxquels l'utilisateur a accès
+     */
+    public function projects()
+    {
+        return $this->belongsToMany(Project::class, 'project_user')
+                    ->withTimestamps();
+    }
+
+    /**
      * Les notifications de l'utilisateur
      */
     public function notifications()

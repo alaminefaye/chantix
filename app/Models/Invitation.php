@@ -10,6 +10,7 @@ class Invitation extends Model
 {
     protected $fillable = [
         'company_id',
+        'project_id',
         'invited_by',
         'role_id',
         'email',
@@ -47,6 +48,14 @@ class Invitation extends Model
     public function role()
     {
         return $this->belongsTo(Role::class);
+    }
+
+    /**
+     * Le projet concerné (optionnel)
+     */
+    public function project()
+    {
+        return $this->belongsTo(Project::class);
     }
 
     /**

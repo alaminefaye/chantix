@@ -25,7 +25,8 @@ class ProjectController extends Controller
             ], 400);
         }
 
-        $query = Project::forCompany($companyId)->with('creator');
+        // Filtrer les projets selon l'accès de l'utilisateur
+        $query = Project::accessibleByUser($user, $companyId)->with('creator');
 
         // Filtre par statut
         if ($request->filled('status')) {
@@ -74,6 +75,7 @@ class ProjectController extends Controller
             ], 400);
         }
 
+        // Récupérer le projet avec vérification d'accès
         $project = Project::forCompany($companyId)
             ->with([
                 'creator', 
@@ -91,6 +93,19 @@ class ProjectController extends Controller
                 'success' => false,
                 'message' => 'Projet non trouvé.',
             ], 404);
+        }
+
+        // Vérifier l'accès au projet spécifique
+        if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $project->company_id)) {
+            $hasAccess = $project->users()->where('users.id', $user->id)->exists() 
+                      || $project->created_by == $user->id;
+            
+            if (!$hasAccess) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Vous n\'avez pas accès à ce projet.',
+                ], 403);
+            }
         }
 
         return response()->json([
@@ -159,6 +174,11 @@ class ProjectController extends Controller
             'company_id' => $companyId,
             'created_by' => $user->id,
         ]);
+
+        // Associer automatiquement le créateur au projet
+        if (!$project->users()->where('users.id', $user->id)->exists()) {
+            $project->users()->attach($user->id);
+        }
 
         return response()->json([
             'success' => true,

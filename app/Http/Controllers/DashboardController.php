@@ -24,17 +24,20 @@ class DashboardController extends Controller
 
         $company = Company::findOrFail($companyId);
         
+        // Utiliser accessibleByUser pour filtrer selon l'accès
+        $baseQuery = Project::accessibleByUser($user, $companyId);
+        
         // Statistiques des projets
-        $totalProjects = Project::forCompany($companyId)->count();
-        $activeProjects = Project::forCompany($companyId)->where('status', 'en_cours')->count();
-        $completedProjects = Project::forCompany($companyId)->where('status', 'termine')->count();
-        $blockedProjects = Project::forCompany($companyId)->where('status', 'bloque')->count();
+        $totalProjects = (clone $baseQuery)->count();
+        $activeProjects = (clone $baseQuery)->where('status', 'en_cours')->count();
+        $completedProjects = (clone $baseQuery)->where('status', 'termine')->count();
+        $blockedProjects = (clone $baseQuery)->where('status', 'bloque')->count();
         
         // Budget total
-        $totalBudget = Project::forCompany($companyId)->sum('budget');
+        $totalBudget = (clone $baseQuery)->sum('budget');
         
         // Projets récents
-        $recentProjects = Project::forCompany($companyId)
+        $recentProjects = (clone $baseQuery)
             ->with('creator')
             ->orderBy('created_at', 'desc')
             ->limit(5)
@@ -42,14 +45,14 @@ class DashboardController extends Controller
         
         // Projets par statut
         $projectsByStatus = [
-            'non_demarre' => Project::forCompany($companyId)->where('status', 'non_demarre')->count(),
+            'non_demarre' => (clone $baseQuery)->where('status', 'non_demarre')->count(),
             'en_cours' => $activeProjects,
             'termine' => $completedProjects,
             'bloque' => $blockedProjects,
         ];
 
         // Avancement moyen
-        $averageProgress = Project::forCompany($companyId)
+        $averageProgress = (clone $baseQuery)
             ->where('status', 'en_cours')
             ->avg('progress') ?? 0;
 
@@ -58,11 +61,13 @@ class DashboardController extends Controller
         $searchResults = [];
         
         if ($searchQuery) {
-            // Rechercher dans les projets
-            $searchResults['projects'] = Project::forCompany($companyId)
-                ->where('name', 'like', '%' . $searchQuery . '%')
-                ->orWhere('description', 'like', '%' . $searchQuery . '%')
-                ->orWhere('client_name', 'like', '%' . $searchQuery . '%')
+            // Rechercher dans les projets (filtrés par accès)
+            $searchResults['projects'] = Project::accessibleByUser($user, $companyId)
+                ->where(function($q) use ($searchQuery) {
+                    $q->where('name', 'like', '%' . $searchQuery . '%')
+                      ->orWhere('description', 'like', '%' . $searchQuery . '%')
+                      ->orWhere('client_name', 'like', '%' . $searchQuery . '%');
+                })
                 ->limit(5)
                 ->get();
             
@@ -148,17 +153,20 @@ class DashboardController extends Controller
             ], 400);
         }
 
+        // Utiliser accessibleByUser pour filtrer selon l'accès
+        $baseQuery = Project::accessibleByUser($user, $companyId);
+        
         // Statistiques des projets
-        $totalProjects = Project::forCompany($companyId)->count();
-        $activeProjects = Project::forCompany($companyId)->where('status', 'en_cours')->count();
-        $completedProjects = Project::forCompany($companyId)->where('status', 'termine')->count();
-        $blockedProjects = Project::forCompany($companyId)->where('status', 'bloque')->count();
+        $totalProjects = (clone $baseQuery)->count();
+        $activeProjects = (clone $baseQuery)->where('status', 'en_cours')->count();
+        $completedProjects = (clone $baseQuery)->where('status', 'termine')->count();
+        $blockedProjects = (clone $baseQuery)->where('status', 'bloque')->count();
         
         // Budget total
-        $totalBudget = Project::forCompany($companyId)->sum('budget');
+        $totalBudget = (clone $baseQuery)->sum('budget');
         
         // Avancement moyen
-        $averageProgress = Project::forCompany($companyId)
+        $averageProgress = (clone $baseQuery)
             ->where('status', 'en_cours')
             ->avg('progress') ?? 0;
 

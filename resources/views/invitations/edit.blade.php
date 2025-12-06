@@ -62,6 +62,23 @@
                 @enderror
               </div>
             </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="project_id" class="form-label">Projet <span class="text-muted">(optionnel)</span></label>
+                <select class="form-select @error('project_id') is-invalid @enderror" id="project_id" name="project_id">
+                  <option value="">Tous les projets de l'entreprise</option>
+                  @foreach($projects as $project)
+                    <option value="{{ $project->id }}" {{ old('project_id', $invitation->project_id) == $project->id ? 'selected' : '' }}>
+                      {{ $project->name }}
+                    </option>
+                  @endforeach
+                </select>
+                <small class="text-muted">Si un projet est sélectionné, l'utilisateur n'aura accès qu'à ce projet.</small>
+                @error('project_id')
+                  <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+              </div>
+            </div>
             <div class="col-12">
               <div class="mb-3">
                 <label for="message" class="form-label">Message (optionnel)</label>

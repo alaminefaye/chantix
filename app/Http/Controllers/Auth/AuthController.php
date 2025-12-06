@@ -133,6 +133,14 @@ class AuthController extends Controller
                 'joined_at' => now(),
             ]);
 
+            // Associer l'utilisateur au projet si un projet est spécifié dans l'invitation
+            if ($invitation->project_id) {
+                $project = \App\Models\Project::find($invitation->project_id);
+                if ($project && !$project->users()->where('users.id', $user->id)->exists()) {
+                    $project->users()->attach($user->id);
+                }
+            }
+
             $user->current_company_id = $invitation->company_id;
             $user->save();
 

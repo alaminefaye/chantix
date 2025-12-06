@@ -66,6 +66,22 @@
           </div>
 
           <div class="mb-3">
+            <label for="project_id" class="form-label">Projet <span class="text-muted">(optionnel)</span></label>
+            <select class="form-select @error('project_id') is-invalid @enderror" id="project_id" name="project_id">
+              <option value="">Tous les projets de l'entreprise</option>
+              @foreach($projects as $project)
+                <option value="{{ $project->id }}" {{ old('project_id') == $project->id ? 'selected' : '' }}>
+                  {{ $project->name }}
+                </option>
+              @endforeach
+            </select>
+            <small class="text-muted">Si un projet est sélectionné, l'utilisateur n'aura accès qu'à ce projet. Sinon, il aura accès à tous les projets de l'entreprise.</small>
+            @error('project_id')
+              <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
+          </div>
+
+          <div class="mb-3">
             <label for="message" class="form-label">Message personnalisé (optionnel)</label>
             <textarea class="form-control @error('message') is-invalid @enderror" id="message" name="message" rows="3" placeholder="Message à inclure...">{{ old('message') }}</textarea>
             @error('message')

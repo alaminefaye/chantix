@@ -73,8 +73,9 @@ class InvitationController extends Controller
         }
 
         $roles = Role::all();
+        $projects = $company->projects()->orderBy('name')->get();
 
-        return view('invitations.create', compact('company', 'roles'));
+        return view('invitations.create', compact('company', 'roles', 'projects'));
     }
 
     /**
@@ -98,11 +99,22 @@ class InvitationController extends Controller
         $validated = $request->validate([
             'email' => 'required|email|max:255',
             'role_id' => 'required|integer|exists:roles,id',
+            'project_id' => 'nullable|integer|exists:projects,id',
             'message' => 'nullable|string|max:1000',
             'create_directly' => 'nullable|boolean', // Option pour créer directement
             'name' => 'nullable|string|max:255|required_if:create_directly,1',
             'password' => 'nullable|string|min:8|required_if:create_directly,1',
         ]);
+
+        // Vérifier que le projet appartient bien à l'entreprise si un projet est sélectionné
+        if (isset($validated['project_id']) && $validated['project_id']) {
+            $project = \App\Models\Project::find($validated['project_id']);
+            if (!$project || $project->company_id != $company->id) {
+                return redirect()->back()
+                    ->withErrors(['project_id' => 'Le projet sélectionné n\'appartient pas à cette entreprise.'])
+                    ->withInput();
+            }
+        }
         
         // Convertir role_id en entier pour éviter les problèmes de type
         $validated['role_id'] = (int) $validated['role_id'];
@@ -153,6 +165,14 @@ class InvitationController extends Controller
                         'joined_at' => now(),
                     ]);
 
+                    // Associer l'utilisateur au projet si un projet est spécifié
+                    if (isset($validated['project_id']) && $validated['project_id']) {
+                        $project = \App\Models\Project::find($validated['project_id']);
+                        if ($project && !$project->users()->where('users.id', $existingUser->id)->exists()) {
+                            $project->users()->attach($existingUser->id);
+                        }
+                    }
+
                     return redirect()->route('invitations.index', $company)
                         ->with('success', 'Utilisateur ajouté directement à l\'entreprise avec succès.');
                 }
@@ -193,9 +213,18 @@ class InvitationController extends Controller
                     'joined_at' => now(),
                 ]);
 
+                // Associer l'utilisateur au projet si un projet est spécifié
+                if (isset($validated['project_id']) && $validated['project_id']) {
+                    $project = \App\Models\Project::find($validated['project_id']);
+                    if ($project && !$project->users()->where('users.id', $newUser->id)->exists()) {
+                        $project->users()->attach($newUser->id);
+                    }
+                }
+
                 // Créer une invitation marquée comme acceptée pour l'historique
                 Invitation::create([
                     'company_id' => $company->id,
+                    'project_id' => $validated['project_id'] ?? null,
                     'invited_by' => $user->id,
                     'role_id' => $validated['role_id'],
                     'email' => $validated['email'],
@@ -227,6 +256,7 @@ class InvitationController extends Controller
         // Créer l'invitation
         $invitation = Invitation::create([
             'company_id' => $company->id,
+            'project_id' => $validated['project_id'] ?? null,
             'invited_by' => $user->id,
             'role_id' => $validated['role_id'],
             'email' => $validated['email'],
@@ -287,6 +317,14 @@ class InvitationController extends Controller
             'is_active' => true,
             'joined_at' => now(),
         ]);
+
+        // Associer l'utilisateur au projet si un projet est spécifié dans l'invitation
+        if ($invitation->project_id) {
+            $project = \App\Models\Project::find($invitation->project_id);
+            if ($project && !$project->users()->where('users.id', $user->id)->exists()) {
+                $project->users()->attach($user->id);
+            }
+        }
 
         // Définir l'entreprise comme actuelle si l'utilisateur n'en a pas
         if (!$user->current_company_id) {
@@ -389,8 +427,9 @@ class InvitationController extends Controller
         }
 
         $roles = Role::all();
+        $projects = $company->projects()->orderBy('name')->get();
 
-        return view('invitations.edit', compact('company', 'invitation', 'roles'));
+        return view('invitations.edit', compact('company', 'invitation', 'roles', 'projects'));
     }
 
     /**
@@ -423,8 +462,19 @@ class InvitationController extends Controller
         $validated = $request->validate([
             'email' => 'required|email|max:255',
             'role_id' => 'required|integer|exists:roles,id',
+            'project_id' => 'nullable|integer|exists:projects,id',
             'message' => 'nullable|string|max:1000',
         ]);
+
+        // Vérifier que le projet appartient bien à l'entreprise si un projet est sélectionné
+        if (isset($validated['project_id']) && $validated['project_id']) {
+            $project = \App\Models\Project::find($validated['project_id']);
+            if (!$project || $project->company_id != $company->id) {
+                return redirect()->back()
+                    ->withErrors(['project_id' => 'Le projet sélectionné n\'appartient pas à cette entreprise.'])
+                    ->withInput();
+            }
+        }
         
         // Convertir role_id en entier pour éviter les problèmes de type
         $validated['role_id'] = (int) $validated['role_id'];

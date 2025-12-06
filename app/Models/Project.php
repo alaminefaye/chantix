@@ -71,6 +71,29 @@ class Project extends Model
     }
 
     /**
+     * Scope pour les projets accessibles par un utilisateur
+     */
+    public function scopeAccessibleByUser($query, $user, $companyId)
+    {
+        // Admin et super admin voient tous les projets de l'entreprise
+        if ($user->isSuperAdmin() || $user->hasRoleInCompany('admin', $companyId)) {
+            return $query->where('company_id', $companyId);
+        }
+
+        // Utilisateur normal : voir seulement les projets auxquels il est associé
+        return $query->where('company_id', $companyId)
+            ->where(function($q) use ($user) {
+                $q->whereIn('id', function($subQuery) use ($user) {
+                    $subQuery->select('project_id')
+                        ->from('project_user')
+                        ->where('user_id', $user->id);
+                })
+                // Aussi les projets créés par l'utilisateur
+                ->orWhere('created_by', $user->id);
+            });
+    }
+
+    /**
      * Les mises à jour d'avancement du projet
      */
     public function progressUpdates()
@@ -168,5 +191,14 @@ class Project extends Model
     public function statusHistory()
     {
         return $this->hasMany(ProjectStatusHistory::class)->orderBy('created_at', 'desc');
+    }
+
+    /**
+     * Les utilisateurs associés au projet
+     */
+    public function users()
+    {
+        return $this->belongsToMany(User::class, 'project_user')
+                    ->withTimestamps();
     }
 }

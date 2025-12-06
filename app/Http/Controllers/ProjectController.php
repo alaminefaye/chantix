@@ -23,7 +23,8 @@ class ProjectController extends Controller
                 ->with('error', 'Veuillez sélectionner une entreprise.');
         }
 
-        $query = Project::forCompany($companyId)->with('creator');
+        // Filtrer les projets selon l'accès de l'utilisateur
+        $query = Project::accessibleByUser($user, $companyId)->with('creator');
 
         // Filtre par statut
         if ($request->filled('status')) {
@@ -146,6 +147,11 @@ class ProjectController extends Controller
             'client_contact' => $request->client_contact,
         ]);
 
+        // Associer automatiquement le créateur au projet
+        if (!$project->users()->where('users.id', $user->id)->exists()) {
+            $project->users()->attach($user->id);
+        }
+
         return redirect()->route('projects.index')
             ->with('success', 'Projet créé avec succès !');
     }
@@ -157,9 +163,21 @@ class ProjectController extends Controller
     {
         $user = Auth::user();
         
-        // Vérifier l'accès
+        // Vérifier l'accès à l'entreprise
         if ($project->company_id !== $user->current_company_id) {
             abort(403);
+        }
+
+        // Vérifier l'accès au projet spécifique
+        // Admin et super admin ont accès à tous les projets
+        if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $project->company_id)) {
+            // Vérifier si l'utilisateur a accès à ce projet
+            $hasAccess = $project->users()->where('users.id', $user->id)->exists() 
+                      || $project->created_by == $user->id;
+            
+            if (!$hasAccess) {
+                abort(403, 'Vous n\'avez pas accès à ce projet.');
+            }
         }
 
         $project->load('creator', 'company', 'materials', 'employees', 'progressUpdates.user', 'tasks.creator', 'expenses.creator', 'comments.user');
@@ -212,8 +230,19 @@ class ProjectController extends Controller
     {
         $user = Auth::user();
         
+        // Vérifier l'accès à l'entreprise
         if ($project->company_id !== $user->current_company_id) {
             abort(403);
+        }
+
+        // Vérifier l'accès au projet spécifique
+        if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $project->company_id)) {
+            $hasAccess = $project->users()->where('users.id', $user->id)->exists() 
+                      || $project->created_by == $user->id;
+            
+            if (!$hasAccess) {
+                abort(403, 'Vous n\'avez pas accès à ce projet.');
+            }
         }
 
         // Récupérer tous les événements
@@ -280,8 +309,19 @@ class ProjectController extends Controller
     {
         $user = Auth::user();
         
+        // Vérifier l'accès à l'entreprise
         if ($project->company_id !== $user->current_company_id) {
             abort(403);
+        }
+
+        // Vérifier l'accès au projet spécifique
+        if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $project->company_id)) {
+            $hasAccess = $project->users()->where('users.id', $user->id)->exists() 
+                      || $project->created_by == $user->id;
+            
+            if (!$hasAccess) {
+                abort(403, 'Vous n\'avez pas accès à ce projet.');
+            }
         }
 
         // Récupérer toutes les photos et vidéos des mises à jour
@@ -323,8 +363,19 @@ class ProjectController extends Controller
     {
         $user = Auth::user();
         
+        // Vérifier l'accès à l'entreprise
         if ($project->company_id !== $user->current_company_id) {
             abort(403);
+        }
+
+        // Vérifier l'accès au projet spécifique
+        if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $project->company_id)) {
+            $hasAccess = $project->users()->where('users.id', $user->id)->exists() 
+                      || $project->created_by == $user->id;
+            
+            if (!$hasAccess) {
+                abort(403, 'Vous n\'avez pas accès à ce projet.');
+            }
         }
 
         // Vérifier les permissions : seuls admin et chef_chantier peuvent modifier des projets
@@ -342,8 +393,19 @@ class ProjectController extends Controller
     {
         $user = Auth::user();
         
+        // Vérifier l'accès à l'entreprise
         if ($project->company_id !== $user->current_company_id) {
             abort(403);
+        }
+
+        // Vérifier l'accès au projet spécifique
+        if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $project->company_id)) {
+            $hasAccess = $project->users()->where('users.id', $user->id)->exists() 
+                      || $project->created_by == $user->id;
+            
+            if (!$hasAccess) {
+                abort(403, 'Vous n\'avez pas accès à ce projet.');
+            }
         }
 
         // Vérifier les permissions : seuls admin et chef_chantier peuvent modifier des projets
@@ -396,8 +458,15 @@ class ProjectController extends Controller
     {
         $user = Auth::user();
         
+        // Vérifier l'accès à l'entreprise
         if ($project->company_id !== $user->current_company_id) {
             abort(403);
+        }
+
+        // Vérifier l'accès au projet spécifique et les permissions de suppression
+        // Seuls admin et super admin peuvent supprimer
+        if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $project->company_id)) {
+            abort(403, 'Vous n\'avez pas la permission de supprimer ce projet.');
         }
 
         $project->delete();
