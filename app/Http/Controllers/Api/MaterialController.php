@@ -130,18 +130,23 @@ class MaterialController extends Controller
             $data['is_active'] = $request->input('is_active', true);
             
             // S'assurer que les valeurs par défaut sont définies
-            if (empty($data['unit'])) {
-                $data['unit'] = 'unité';
-            }
-            if (!isset($data['unit_price']) || $data['unit_price'] === null) {
-                $data['unit_price'] = 0;
-            }
-            if (!isset($data['stock_quantity']) || $data['stock_quantity'] === null) {
-                $data['stock_quantity'] = 0;
-            }
-            if (!isset($data['min_stock']) || $data['min_stock'] === null) {
-                $data['min_stock'] = 0;
-            }
+            // Le champ 'unit' est requis en base de données, donc on doit toujours le définir
+            $data['unit'] = $request->filled('unit') && !empty(trim($request->input('unit')))
+                ? trim($request->input('unit'))
+                : 'unité';
+            
+            // Les autres champs numériques peuvent être null en base, mais on définit des valeurs par défaut
+            $data['unit_price'] = $request->filled('unit_price') && $request->input('unit_price') !== null
+                ? $request->input('unit_price')
+                : 0;
+            
+            $data['stock_quantity'] = $request->filled('stock_quantity') && $request->input('stock_quantity') !== null
+                ? $request->input('stock_quantity')
+                : 0;
+            
+            $data['min_stock'] = $request->filled('min_stock') && $request->input('min_stock') !== null
+                ? $request->input('min_stock')
+                : 0;
 
             $material = Material::create($data);
         } catch (\Exception $e) {

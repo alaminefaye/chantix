@@ -125,25 +125,44 @@ class PushNotificationService
                 try {
                     $multicast = $this->messaging->sendMulticast($message, $chunk);
                     
-                    // Obtenir les succès et échecs
+                    if (!$multicast) {
+                        Log::warning('Multicast send returned null');
+                        continue;
+                    }
+                    
+                    // Obtenir les succès et échecs (méthodes correctes pour la bibliothèque Firebase)
                     $successes = $multicast->successes();
                     $failures = $multicast->failures();
                     
                     // Traiter les succès
-                    foreach ($successes as $success) {
-                        $token = $success->target()->value();
-                        $results[] = $token;
+                    if ($successes) {
+                        foreach ($successes as $success) {
+                            try {
+                                $token = $success->target()->value();
+                                $results[] = $token;
+                            } catch (\Exception $e) {
+                                Log::warning("Error processing success result: " . $e->getMessage());
+                            }
+                        }
                     }
                     
                     // Traiter les échecs
-                    foreach ($failures as $failure) {
-                        $token = $failure->target()->value();
-                        $invalidTokens[] = $token;
-                        $error = $failure->error();
-                        Log::warning("Failed to send notification to token: {$token} - {$error->getMessage()}");
+                    if ($failures) {
+                        foreach ($failures as $failure) {
+                            try {
+                                $token = $failure->target()->value();
+                                $invalidTokens[] = $token;
+                                $error = $failure->error();
+                                Log::warning("Failed to send notification to token: {$token} - {$error->getMessage()}");
+                            } catch (\Exception $e) {
+                                Log::warning("Error processing failure result: " . $e->getMessage());
+                            }
+                        }
                     }
                 } catch (\Exception $e) {
-                    Log::error('Error sending multicast: ' . $e->getMessage());
+                    Log::error('Error sending multicast: ' . $e->getMessage(), [
+                        'trace' => $e->getTraceAsString(),
+                    ]);
                     // En cas d'erreur, essayer d'envoyer individuellement
                     foreach ($chunk as $token) {
                         try {
