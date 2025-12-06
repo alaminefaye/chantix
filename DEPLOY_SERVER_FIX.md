@@ -78,20 +78,42 @@ Consultez les logs Laravel pour voir s'il y a des erreurs :
 tail -f storage/logs/laravel.log
 ```
 
-## Si le problème persiste
+## Solution appliquée (NOUVELLE APPROCHE - IMPORTANT !)
 
-1. Vérifiez que le fichier `app/Http/Controllers/ExpenseController.php` a bien été mis à jour avec les modifications (paramètre `Expense $expense` au lieu de `$expense`)
+Le problème venait du **route model binding dans un contexte de routes imbriquées**. La solution est de récupérer l'expense **via la relation du projet** plutôt que d'utiliser le route model binding automatique.
 
-2. Vérifiez que le fichier `app/Models/Expense.php` contient bien la méthode `resolveRouteBinding`
+### Modifications apportées
 
-3. Testez directement la route :
+Le contrôleur `ExpenseController` a été modifié pour utiliser :
+```php
+$expense = $project->expenses()->findOrFail($expense);
+```
+
+Au lieu de :
+```php
+public function show(Project $project, Expense $expense)
+```
+
+Cette approche garantit que :
+1. L'expense existe
+2. L'expense appartient au projet spécifié
+3. Pas de problème avec le route model binding sur le serveur
+
+### Vérification des modifications
+
+1. Vérifiez que le fichier `app/Http/Controllers/ExpenseController.php` contient bien :
+   - `public function show(Project $project, $expense)` (pas `Expense $expense`)
+   - `$expense = $project->expenses()->findOrFail($expense);` dans la méthode
+
+2. Testez directement la relation :
 ```bash
 php artisan tinker
->>> $expense = \App\Models\Expense::find(3);
+>>> $project = \App\Models\Project::find(1);
+>>> $expense = $project->expenses()->find(3);
 >>> $expense;
 ```
 
-Si l'expense existe, le problème vient du route model binding ou du cache.
+Si l'expense existe via cette relation, le problème vient du cache ou de la configuration.
 
 ## Commandes rapides (copier-coller)
 

@@ -161,15 +161,14 @@ class ExpenseController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Project $project, Expense $expense)
+    public function show(Project $project, $expense)
     {
         $user = Auth::user();
         $projectCompanyId = $project->company_id;
 
-        // Vérifier que la dépense appartient au projet
-        if ($expense->project_id !== $project->id) {
-            abort(404, 'Dépense non trouvée dans ce projet.');
-        }
+        // Récupérer la dépense via la relation du projet pour s'assurer qu'elle appartient au projet
+        // Cela garantit que la dépense appartient bien au projet spécifié
+        $expense = $project->expenses()->findOrFail($expense);
 
         // Vérifier les permissions : Super admin ou utilisateur de l'entreprise
         if (!$user->isSuperAdmin()) {
@@ -187,15 +186,14 @@ class ExpenseController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Project $project, Expense $expense)
+    public function edit(Project $project, $expense)
     {
         $user = Auth::user();
         $projectCompanyId = $project->company_id;
 
-        // Vérifier que la dépense appartient au projet
-        if ($expense->project_id !== $project->id) {
-            abort(404, 'Dépense non trouvée dans ce projet.');
-        }
+        // Récupérer la dépense via la relation du projet pour s'assurer qu'elle appartient au projet
+        // Cela garantit que la dépense appartient bien au projet spécifié
+        $expense = $project->expenses()->findOrFail($expense);
 
         // Vérifier les permissions : Super admin ou utilisateur de l'entreprise
         if (!$user->isSuperAdmin()) {
@@ -214,15 +212,14 @@ class ExpenseController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Project $project, Expense $expense)
+    public function update(Request $request, Project $project, $expense)
     {
         $user = Auth::user();
         $projectCompanyId = $project->company_id;
 
-        // Vérifier que la dépense appartient au projet
-        if ($expense->project_id !== $project->id) {
-            abort(404, 'Dépense non trouvée dans ce projet.');
-        }
+        // Récupérer la dépense via la relation du projet pour s'assurer qu'elle appartient au projet
+        // Cela garantit que la dépense appartient bien au projet spécifié
+        $expense = $project->expenses()->findOrFail($expense);
 
         // Vérifier les permissions : Super admin ou utilisateur de l'entreprise
         if (!$user->isSuperAdmin()) {
@@ -304,15 +301,14 @@ class ExpenseController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Project $project, Expense $expense)
+    public function destroy(Project $project, $expense)
     {
         $user = Auth::user();
         $projectCompanyId = $project->company_id;
 
-        // Vérifier que la dépense appartient au projet
-        if ($expense->project_id !== $project->id) {
-            abort(404, 'Dépense non trouvée dans ce projet.');
-        }
+        // Récupérer la dépense via la relation du projet pour s'assurer qu'elle appartient au projet
+        // Cela garantit que la dépense appartient bien au projet spécifié
+        $expense = $project->expenses()->findOrFail($expense);
 
         // Vérifier les permissions : Super admin ou utilisateur de l'entreprise
         if (!$user->isSuperAdmin()) {
