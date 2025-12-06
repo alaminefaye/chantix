@@ -218,13 +218,19 @@ class ExpenseController extends Controller
 
         // Envoyer des notifications push aux utilisateurs concernés (en arrière-plan pour ne pas bloquer)
         try {
+            \Log::info("📝 Starting notification process for expense creation", [
+                'expense_id' => $expense->id,
+                'project_id' => $project->id,
+                'user_id' => $user->id,
+            ]);
+
             $pushService = new PushNotificationService();
             $amount = number_format($data['amount'], 0, ',', ' ') . ' FCFA';
             
             // Recharger le projet pour s'assurer d'avoir toutes les données
             $project->refresh();
             
-            $pushService->notifyProjectStakeholders(
+            $notifications = $pushService->notifyProjectStakeholders(
                 $project,
                 'expense_created',
                 'Nouvelle dépense créée',
@@ -237,10 +243,15 @@ class ExpenseController extends Controller
                 ],
                 $user->id // Exclure l'utilisateur qui a créé la dépense
             );
+
+            \Log::info("✅ Notification process completed", [
+                'notifications_created' => count($notifications),
+            ]);
         } catch (\Exception $e) {
             // Ne pas faire échouer la création de la dépense si l'envoi de notification échoue
-            \Log::warning("Failed to send expense creation notification: " . $e->getMessage(), [
+            \Log::error("❌ Failed to send expense creation notification: " . $e->getMessage(), [
                 'trace' => $e->getTraceAsString(),
+                'expense_id' => $expense->id ?? null,
             ]);
         }
 

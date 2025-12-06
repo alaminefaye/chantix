@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Models\Project;
+use App\Models\Company;
 use App\Models\Role;
 use App\Models\FcmToken;
 use App\Models\Notification as NotificationModel;
@@ -302,6 +303,14 @@ class PushNotificationService
     public function notifyProjectStakeholders($project, $type, $title, $message, $data = [], $excludeUserId = null)
     {
         try {
+            Log::info("🔔 notifyProjectStakeholders called", [
+                'project_id' => $project->id,
+                'project_name' => $project->name,
+                'company_id' => $project->company_id,
+                'type' => $type,
+                'exclude_user_id' => $excludeUserId,
+            ]);
+
             $companyId = $project->company_id;
             $userIds = collect();
 
@@ -312,6 +321,7 @@ class PushNotificationService
                 });
                 if (!empty($managerIds)) {
                     $userIds = $userIds->merge($managerIds);
+                    Log::info("📋 Found managers: " . implode(', ', $managerIds));
                 }
             }
 
@@ -325,7 +335,12 @@ class PushNotificationService
                 })
                 ->pluck('id');
 
-                $userIds = $userIds->merge($supervisorIds);
+                if ($supervisorIds->isNotEmpty()) {
+                    $userIds = $userIds->merge($supervisorIds);
+                    Log::info("👔 Found supervisors: " . $supervisorIds->implode(', '));
+                }
+            } else {
+                Log::info("⚠️ Role 'superviseur' not found in database");
             }
 
             // 3. Récupérer les clients (utilisateurs avec le rôle "client" dans l'entreprise)
@@ -338,25 +353,55 @@ class PushNotificationService
                 })
                 ->pluck('id');
 
-                $userIds = $userIds->merge($clientIds);
+                if ($clientIds->isNotEmpty()) {
+                    $userIds = $userIds->merge($clientIds);
+                    Log::info("👤 Found clients: " . $clientIds->implode(', '));
+                }
+            } else {
+                Log::info("⚠️ Role 'client' not found in database");
             }
 
             // 4. Récupérer les autres utilisateurs de l'entreprise du projet
-            $companyUserIds = User::whereHas('companies', function($query) use ($companyId) {
-                $query->where('companies.id', $companyId)
-                      ->where('company_user.is_active', true);
-            })
-            ->pluck('id');
-
-            $userIds = $userIds->merge($companyUserIds);
+            // Méthode alternative via la relation directe de Company
+            $company = Company::find($companyId);
+            if ($company) {
+                $companyUserIds = $company->users()
+                    ->wherePivot('is_active', true)
+                    ->pluck('users.id');
+                
+                if ($companyUserIds->isNotEmpty()) {
+                    $userIds = $userIds->merge($companyUserIds);
+                    Log::info("🏢 Found company users via Company model: " . $companyUserIds->implode(', '));
+                } else {
+                    // Essayer avec whereHas si la méthode précédente ne fonctionne pas
+                    $companyUserIds = User::whereHas('companies', function($query) use ($companyId) {
+                        $query->where('companies.id', $companyId)
+                              ->where('company_user.is_active', true);
+                    })
+                    ->pluck('id');
+                    
+                    if ($companyUserIds->isNotEmpty()) {
+                        $userIds = $userIds->merge($companyUserIds);
+                        Log::info("🏢 Found company users via whereHas: " . $companyUserIds->implode(', '));
+                    } else {
+                        Log::warning("⚠️ No users found for company {$companyId}");
+                    }
+                }
+            } else {
+                Log::error("❌ Company {$companyId} not found");
+            }
 
             // Supprimer les doublons et exclure l'utilisateur qui a créé/modifié la dépense
             $userIds = $userIds->unique()->filter(function($userId) use ($excludeUserId) {
                 return $userId != $excludeUserId;
             })->values()->toArray();
 
+            Log::info("👥 Total unique users after filtering: " . count($userIds), [
+                'user_ids' => $userIds,
+            ]);
+
             if (empty($userIds)) {
-                Log::info("No stakeholders found for project {$project->id}");
+                Log::warning("❌ No stakeholders found for project {$project->id} (company: {$companyId})");
                 return [];
             }
 
@@ -380,11 +425,16 @@ class PushNotificationService
                     ]);
 
                     $notifications[] = $notification;
+                    Log::info("✅ Notification created for user {$userId} (ID: {$notification->id})");
                 } catch (\Exception $e) {
-                    Log::warning("Failed to create notification for user {$userId}: " . $e->getMessage());
+                    Log::error("❌ Failed to create notification for user {$userId}: " . $e->getMessage(), [
+                        'trace' => $e->getTraceAsString(),
+                    ]);
                     // Continuer avec les autres utilisateurs
                 }
             }
+
+            Log::info("📬 Created " . count($notifications) . " notifications in database");
 
             // Envoyer les push notifications en une seule fois (plus efficace)
             try {
