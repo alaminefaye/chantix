@@ -297,6 +297,71 @@ class MaterialController extends Controller
     }
 
     /**
+     * Retirer un matériau d'un projet
+     */
+    public function removeFromProject(Project $project, Material $material)
+    {
+        $user = Auth::user();
+        $companyId = $user->current_company_id;
+
+        if ($project->company_id !== $companyId || $material->company_id !== $companyId) {
+            abort(403, 'Accès non autorisé.');
+        }
+
+        // Vérifier que seul un administrateur peut retirer un matériau
+        if (!$user->isSuperAdmin() && !$user->hasRoleInCompany('admin', $companyId)) {
+            abort(403, 'Seuls les administrateurs peuvent retirer des matériaux d\'un projet.');
+        }
+
+        // Récupérer le ProjectMaterial pour vérifier les quantités
+        $projectMaterial = $project->projectMaterials()
+            ->where('material_id', $material->id)
+            ->first();
+
+        if (!$projectMaterial) {
+            return redirect()->back()
+                ->with('error', 'Ce matériau n\'est pas associé à ce projet.');
+        }
+
+        DB::beginTransaction();
+        try {
+            $stockService = new StockService();
+
+            // Calculer la quantité non utilisée (livrée mais pas encore utilisée)
+            $unusedQuantity = $projectMaterial->quantity_delivered - $projectMaterial->quantity_used;
+            
+            // Si du matériau a été livré mais pas encore utilisé, on doit retirer du stock
+            // ce qui avait été ajouté lors de la livraison mais qui n'a pas été utilisé
+            if ($unusedQuantity > 0) {
+                // Retirer du stock la quantité qui avait été ajoutée lors de la livraison mais non utilisée
+                // Car lors de la livraison, on avait ajouté au stock, maintenant on retire ce qui n'a pas été utilisé
+                $stockService->removeStock(
+                    $material,
+                    $unusedQuantity,
+                    $project,
+                    'Retrait du projet',
+                    "Matériau retiré du projet: {$project->name}. Quantité non utilisée retirée du stock."
+                );
+            }
+
+            // Note: Si du matériau a été utilisé (quantity_used > 0), on ne le remet pas au stock
+            // car il a déjà été consommé/utilisé dans le projet
+
+            // Détacher le matériau du projet
+            $project->materials()->detach($material->id);
+
+            DB::commit();
+
+            return redirect()->back()
+                ->with('success', 'Matériau retiré du projet avec succès.' . ($unusedQuantity > 0 ? ' La quantité non utilisée a été retirée du stock.' : ''));
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()
+                ->with('error', 'Erreur lors du retrait du matériau: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Mettre à jour les quantités d'un matériau dans un projet
      */
     public function updateProjectMaterial(Request $request, Project $project, Material $material)

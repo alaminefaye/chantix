@@ -243,6 +243,15 @@
                           </button>
                         </div>
                       @endif
+                      @if(auth()->user()->isSuperAdmin() || auth()->user()->hasRoleInCompany('admin', $project->company_id))
+                        <form action="{{ route('projects.materials.remove', ['project' => $project, 'material' => $material]) }}" method="POST" class="d-inline" onsubmit="return confirm('Êtes-vous sûr de vouloir retirer ce matériau du projet ? Cette action est irréversible.');">
+                          @csrf
+                          @method('DELETE')
+                          <button type="submit" class="btn btn-sm btn-danger" title="Retirer le matériau du projet">
+                            <i class="ti ti-trash"></i>
+                          </button>
+                        </form>
+                      @endif
                     </td>
                   </tr>
                 @endforeach

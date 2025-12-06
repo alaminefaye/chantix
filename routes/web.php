@@ -96,6 +96,7 @@ Route::middleware(['auth', 'verified', 'company'])->group(function () {
     Route::get('/materials/{material}/stock-movements', [\App\Http\Controllers\MaterialController::class, 'stockMovements'])->name('materials.stock-movements');
     Route::post('/projects/{project}/materials/add', [\App\Http\Controllers\MaterialController::class, 'addToProject'])->name('projects.materials.add');
     Route::put('/projects/{project}/materials/{material}/update', [\App\Http\Controllers\MaterialController::class, 'updateProjectMaterial'])->name('projects.materials.update');
+    Route::delete('/projects/{project}/materials/{material}/remove', [\App\Http\Controllers\MaterialController::class, 'removeFromProject'])->name('projects.materials.remove');
     Route::get('/projects/{project}/materials/{material}/transfer', [\App\Http\Controllers\MaterialController::class, 'showTransfer'])->name('projects.materials.transfer');
     Route::post('/projects/{project}/materials/{material}/transfer', [\App\Http\Controllers\MaterialController::class, 'transfer'])->name('projects.materials.transfer.store');
     
