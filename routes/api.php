@@ -57,6 +57,17 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
         Route::post('/progress', [\App\Http\Controllers\Api\ProgressController::class, 'store']);
         Route::match(['put', 'post'], '/progress/{progress}', [\App\Http\Controllers\Api\ProgressController::class, 'update']);
         Route::delete('/progress/{progress}', [\App\Http\Controllers\Api\ProgressController::class, 'destroy']);
+        
+        // Matériaux du projet
+        Route::get('/materials', [\App\Http\Controllers\Api\ProjectMaterialController::class, 'index']);
+        Route::post('/materials', [\App\Http\Controllers\Api\ProjectMaterialController::class, 'store']);
+        Route::put('/materials/{material}', [\App\Http\Controllers\Api\ProjectMaterialController::class, 'update']);
+        Route::delete('/materials/{material}', [\App\Http\Controllers\Api\ProjectMaterialController::class, 'destroy']);
+        
+        // Employés du projet
+        Route::get('/employees', [\App\Http\Controllers\Api\ProjectEmployeeController::class, 'index']);
+        Route::post('/employees', [\App\Http\Controllers\Api\ProjectEmployeeController::class, 'store']);
+        Route::delete('/employees/{employee}', [\App\Http\Controllers\Api\ProjectEmployeeController::class, 'destroy']);
     });
     
     // Matériaux
