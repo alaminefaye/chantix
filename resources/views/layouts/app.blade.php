@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes">
   <title>@yield('title', 'Chantix')</title>
   <link rel="shortcut icon" type="image/png" href="{{ asset('assets/images/logos/favicon.png') }}" />
+  <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}" />
   <link rel="stylesheet" href="{{ asset('assets/css/styles.min.css') }}" />
 </head>
 
@@ -19,7 +20,7 @@
       <div>
         <div class="brand-logo d-flex align-items-center justify-content-between">
           <a href="{{ route('dashboard') }}" class="text-nowrap logo-img">
-            <img src="{{ asset('assets/images/logos/logo.png') }}" width="180" alt="Chantix Logo" />
+            <img src="{{ asset('assets/images/logos/dark-logo.png') }}" style="max-width: 180px; height: auto; object-fit: contain;" alt="Chantix Logo" />
           </a>
           <div class="close-btn d-xl-none d-block sidebartoggler cursor-pointer" id="sidebarCollapse">
             <i class="ti ti-x fs-8"></i>
