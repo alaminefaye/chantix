@@ -168,6 +168,12 @@ class ReportController extends Controller
 
         // Générer le PDF
         try {
+            // S'assurer que le répertoire existe
+            $reportsDir = storage_path('app/public/reports');
+            if (!file_exists($reportsDir)) {
+                mkdir($reportsDir, 0755, true);
+            }
+
             $viewData = [
                 'project' => $project,
                 'data' => $data,
@@ -184,13 +190,38 @@ class ReportController extends Controller
                 $viewData['endDate'] = $endDate;
             }
             
-            $pdf = Pdf::loadView('reports.pdf.' . $viewName, $viewData);
+            // Générer le PDF avec gestion d'erreur améliorée
+            $pdf = Pdf::loadView('reports.pdf.' . $viewName, $viewData)
+                ->setPaper('a4', 'portrait')
+                ->setOption('enable-local-file-access', true);
 
-            $filename = 'rapport-' . $type . '-' . $project->name . '-' . $reportDate->format('Y-m-d') . '.pdf';
+            // Nettoyer le nom du fichier pour éviter les caractères spéciaux
+            $safeProjectName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $project->name);
+            $filename = 'rapport-' . $type . '-' . $safeProjectName . '-' . $reportDate->format('Y-m-d') . '.pdf';
             $filePath = 'reports/' . $filename;
             
             // Sauvegarder le PDF
             Storage::disk('public')->put($filePath, $pdf->output());
+
+            // Préparer les données pour la sérialisation JSON
+            $serializableData = [
+                'attendances_count' => $data['attendances']->count(),
+                'progress_updates_count' => $data['progressUpdates']->count(),
+                'expenses_count' => $data['expenses']->count(),
+                'tasks_count' => $data['tasks']->count(),
+                'totalExpenses' => $data['totalExpenses'],
+                'totalEmployees' => $data['totalEmployees'],
+                'totalHours' => $data['totalHours'],
+            ];
+
+            // Ajouter les données spécifiques au type hebdomadaire
+            if ($type === 'hebdomadaire') {
+                $serializableData['totalOvertime'] = $data['totalOvertime'] ?? 0;
+                $serializableData['overdueTasks'] = $data['overdueTasks'] ?? 0;
+                $serializableData['expensesByType'] = $data['expensesByType']->toArray();
+                $serializableData['tasksByStatus'] = $data['tasksByStatus']->toArray();
+                $serializableData['progressEvolution'] = $data['progressEvolution'] ?? [];
+            }
 
             // Créer le rapport
             $report = Report::create([
@@ -199,7 +230,7 @@ class ReportController extends Controller
                 'type' => $type,
                 'report_date' => $reportDate,
                 'end_date' => $endDate,
-                'data' => $data,
+                'data' => $serializableData,
                 'file_path' => $filePath,
             ]);
 
@@ -214,13 +245,19 @@ class ReportController extends Controller
                 'project_id' => $projectId,
                 'type' => $type,
                 'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString(),
             ]);
             
             return response()->json([
                 'success' => false,
-                'message' => 'Erreur lors de la génération du PDF: ' . $e->getMessage(),
-                'error_details' => config('app.debug') ? $e->getTraceAsString() : null,
+                'message' => 'Erreur lors de la génération du rapport. Veuillez réessayer ou contacter le support.',
+                'error_details' => config('app.debug') ? [
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ] : null,
             ], 500);
         }
     }

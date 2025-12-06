@@ -146,10 +146,10 @@
                 @endphp
                 @foreach($employeeStats as $stat)
                     <tr>
-                        <td>{{ $stat['employee']->full_name ?? 'N/A' }}</td>
-                        <td>{{ $stat['days'] }}</td>
-                        <td>{{ number_format($stat['hours'], 1) }}h</td>
-                        <td>{{ number_format($stat['overtime'], 1) }}h</td>
+                        <td>{{ $stat['employee'] ? $stat['employee']->full_name : 'N/A' }}</td>
+                        <td>{{ $stat['days'] ?? 0 }}</td>
+                        <td>{{ number_format($stat['hours'] ?? 0, 1) }}h</td>
+                        <td>{{ number_format($stat['overtime'] ?? 0, 1) }}h</td>
                     </tr>
                 @endforeach
             </tbody>

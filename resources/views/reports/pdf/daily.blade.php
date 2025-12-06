@@ -121,9 +121,9 @@
                 <tbody>
                     @foreach($data['attendances'] as $attendance)
                         <tr>
-                            <td>{{ $attendance->employee->full_name ?? 'N/A' }}</td>
-                            <td>{{ $attendance->check_in ?? '-' }}</td>
-                            <td>{{ $attendance->check_out ?? '-' }}</td>
+                            <td>{{ $attendance->employee ? $attendance->employee->full_name : 'N/A' }}</td>
+                            <td>{{ $attendance->check_in ? \Carbon\Carbon::parse($attendance->check_in)->format('H:i') : '-' }}</td>
+                            <td>{{ $attendance->check_out ? \Carbon\Carbon::parse($attendance->check_out)->format('H:i') : '-' }}</td>
                             <td>{{ number_format($attendance->hours_worked ?? 0, 2) }}h</td>
                             <td>{{ number_format($attendance->overtime_hours ?? 0, 2) }}h</td>
                         </tr>
@@ -150,10 +150,10 @@
                 <tbody>
                     @foreach($data['progressUpdates'] as $update)
                         <tr>
-                            <td>{{ $update->user->name ?? 'N/A' }}</td>
-                            <td>{{ $update->progress_percentage }}%</td>
+                            <td>{{ $update->user ? $update->user->name : 'N/A' }}</td>
+                            <td>{{ $update->progress_percentage ?? 0 }}%</td>
                             <td>{{ Str::limit($update->description ?? '-', 50) }}</td>
-                            <td>{{ $update->created_at->format('H:i') }}</td>
+                            <td>{{ $update->created_at ? $update->created_at->format('H:i') : '-' }}</td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -178,9 +178,9 @@
                 <tbody>
                     @foreach($data['expenses'] as $expense)
                         <tr>
-                            <td>{{ $expense->title }}</td>
-                            <td>{{ $expense->type_label }}</td>
-                            <td>{{ number_format($expense->amount, 2) }} FCFA</td>
+                            <td>{{ $expense->title ?? '-' }}</td>
+                            <td>{{ $expense->type_label ?? ($expense->type ?? '-') }}</td>
+                            <td>{{ number_format($expense->amount ?? 0, 2) }} FCFA</td>
                             <td>{{ $expense->supplier ?? '-' }}</td>
                         </tr>
                     @endforeach
@@ -213,10 +213,10 @@
                 <tbody>
                     @foreach($data['tasks'] as $task)
                         <tr>
-                            <td>{{ $task->title }}</td>
-                            <td>{{ $task->assignedEmployee->full_name ?? 'Non assigné' }}</td>
-                            <td>{{ $task->status_label }}</td>
-                            <td>{{ $task->priority_label }}</td>
+                            <td>{{ $task->title ?? '-' }}</td>
+                            <td>{{ $task->assignedEmployee ? $task->assignedEmployee->full_name : 'Non assigné' }}</td>
+                            <td>{{ $task->status_label ?? ($task->status ?? '-') }}</td>
+                            <td>{{ $task->priority_label ?? ($task->priority ?? '-') }}</td>
                         </tr>
                     @endforeach
                 </tbody>
