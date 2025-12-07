@@ -77,3 +77,4 @@ Cette migration crée la table pivot nécessaire pour la relation many-to-many e
 - Si des invitations avaient déjà des projets associés via l'ancienne colonne `project_id`, vous devrez peut-être migrer ces données manuellement si nécessaire
 
 
+

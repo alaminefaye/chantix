@@ -73,30 +73,25 @@
                   <td class="border-bottom-0">
                     @php
                       $invitationProjects = collect([]);
-                      try {
-                        // Essayer d'abord avec la relation chargée
-                        if ($invitation->relationLoaded('projects')) {
-                          $invitationProjects = $invitation->projects;
-                        } 
-                        // Sinon, essayer de charger la relation si la table existe
-                        elseif (\Illuminate\Support\Facades\Schema::hasTable('invitation_project')) {
-                          $invitation->load('projects');
-                          $invitationProjects = $invitation->projects;
-                        }
-                        // Si la relation n'est pas disponible, utiliser project_id comme fallback
-                        elseif ($invitation->project_id) {
-                          $project = \App\Models\Project::find($invitation->project_id);
-                          if ($project) {
-                            $invitationProjects = collect([$project]);
+                      // Prioriser toujours la relation many-to-many projects
+                      if (\Illuminate\Support\Facades\Schema::hasTable('invitation_project')) {
+                        try {
+                          // Charger la relation si elle n'est pas déjà chargée
+                          if (!$invitation->relationLoaded('projects')) {
+                            $invitation->load('projects');
                           }
+                          // Récupérer tous les projets de la relation many-to-many
+                          $invitationProjects = $invitation->projects;
+                        } catch (\Exception $e) {
+                          \Log::warning('Erreur lors du chargement des projets de l\'invitation: ' . $e->getMessage());
                         }
-                      } catch (\Exception $e) {
-                        // Si tout échoue, utiliser l'ancienne colonne project_id
-                        if ($invitation->project_id) {
-                          $project = \App\Models\Project::find($invitation->project_id);
-                          if ($project) {
-                            $invitationProjects = collect([$project]);
-                          }
+                      }
+                      
+                      // Fallback: utiliser project_id seulement si la relation many-to-many est vide
+                      if ($invitationProjects->isEmpty() && $invitation->project_id) {
+                        $project = \App\Models\Project::find($invitation->project_id);
+                        if ($project) {
+                          $invitationProjects = collect([$project]);
                         }
                       }
                     @endphp
@@ -108,17 +103,6 @@
                           </span>
                         @endforeach
                       </div>
-                    @elseif($invitation->project_id)
-                      @php
-                        $project = \App\Models\Project::find($invitation->project_id);
-                      @endphp
-                      @if($project)
-                        <span class="badge bg-primary rounded-3 fw-semibold" title="{{ $project->name }}">
-                          {{ Str::limit($project->name, 20) }}
-                        </span>
-                      @else
-                        <span class="badge bg-secondary rounded-3 fw-semibold">Tous les projets</span>
-                      @endif
                     @else
                       <span class="badge bg-secondary rounded-3 fw-semibold">Tous les projets</span>
                     @endif

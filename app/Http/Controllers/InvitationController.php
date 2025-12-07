@@ -49,10 +49,10 @@ class InvitationController extends Controller
 
         $withRelations = ['inviter', 'role', 'project'];
         
-        // Charger la relation projects seulement si la table existe
+        // Charger la relation projects (many-to-many) seulement si la table existe
         if (Schema::hasTable('invitation_project')) {
             try {
-                $withRelations[] = 'projects';
+                $withRelations[] = 'projects'; // Charger TOUS les projets associés
             } catch (\Exception $e) {
                 \Log::warning('Erreur lors du chargement de la relation projects: ' . $e->getMessage());
             }
@@ -62,6 +62,19 @@ class InvitationController extends Controller
             ->with($withRelations)
             ->orderBy('created_at', 'desc')
             ->paginate(20);
+        
+        // S'assurer que la relation projects est bien chargée pour toutes les invitations
+        if (Schema::hasTable('invitation_project')) {
+            foreach ($invitations as $invitation) {
+                if (!$invitation->relationLoaded('projects')) {
+                    try {
+                        $invitation->load('projects');
+                    } catch (\Exception $e) {
+                        \Log::warning('Erreur lors du chargement des projets pour l\'invitation ' . $invitation->id . ': ' . $e->getMessage());
+                    }
+                }
+            }
+        }
 
         return view('invitations.index', compact('company', 'invitations'));
     }
@@ -500,7 +513,14 @@ class InvitationController extends Controller
                 if (!$invitation->relationLoaded('projects')) {
                     $invitation->load('projects');
                 }
+                // Récupérer TOUS les IDs des projets associés (many-to-many)
                 $selectedProjectIds = $invitation->projects->pluck('id')->toArray();
+                
+                \Log::info('Projets chargés pour l\'invitation (edit)', [
+                    'invitation_id' => $invitation->id,
+                    'project_ids' => $selectedProjectIds,
+                    'count' => count($selectedProjectIds)
+                ]);
             } else {
                 // Fallback: utiliser l'ancienne colonne project_id si elle existe
                 if ($invitation->project_id) {
@@ -508,7 +528,10 @@ class InvitationController extends Controller
                 }
             }
         } catch (\Exception $e) {
-            \Log::warning('Erreur lors de la récupération des projets de l\'invitation: ' . $e->getMessage());
+            \Log::warning('Erreur lors de la récupération des projets de l\'invitation: ' . $e->getMessage(), [
+                'invitation_id' => $invitation->id,
+                'trace' => $e->getTraceAsString()
+            ]);
             // Si la table n'existe pas, utiliser l'ancienne colonne project_id comme fallback
             if ($invitation->project_id) {
                 $selectedProjectIds = [$invitation->project_id];
@@ -595,7 +618,7 @@ class InvitationController extends Controller
             }
         }
 
-        // Récupérer les anciens projets de manière sécurisée
+        // Récupérer les anciens projets de manière sécurisée AVANT la mise à jour
         $oldProjectIds = [];
         try {
             if (Schema::hasTable('invitation_project')) {
@@ -603,7 +626,14 @@ class InvitationController extends Controller
                 if (!$invitation->relationLoaded('projects')) {
                     $invitation->load('projects');
                 }
+                // Récupérer TOUS les IDs des anciens projets (many-to-many)
                 $oldProjectIds = $invitation->projects->pluck('id')->toArray();
+                
+                \Log::info('Anciens projets récupérés pour l\'invitation (update)', [
+                    'invitation_id' => $invitation->id,
+                    'old_project_ids' => $oldProjectIds,
+                    'count' => count($oldProjectIds)
+                ]);
             } else {
                 // Fallback: utiliser l'ancienne colonne project_id si elle existe
                 if ($invitation->project_id) {
@@ -611,7 +641,10 @@ class InvitationController extends Controller
                 }
             }
         } catch (\Exception $e) {
-            \Log::warning('Erreur lors de la récupération des anciens projets: ' . $e->getMessage());
+            \Log::warning('Erreur lors de la récupération des anciens projets: ' . $e->getMessage(), [
+                'invitation_id' => $invitation->id,
+                'trace' => $e->getTraceAsString()
+            ]);
             // Si la table n'existe pas, utiliser l'ancienne colonne project_id comme fallback
             if ($invitation->project_id) {
                 $oldProjectIds = [$invitation->project_id];
@@ -625,18 +658,25 @@ class InvitationController extends Controller
 
         // Mettre à jour les projets associés (seulement si la table existe)
         if (Schema::hasTable('invitation_project')) {
-            if (isset($validated['project_ids']) && !empty($validated['project_ids'])) {
-                try {
-                    $invitation->projects()->sync($validated['project_ids']);
-                } catch (\Exception $e) {
-                    \Log::warning('Erreur lors de la synchronisation des projets: ' . $e->getMessage());
-                }
-            } else {
-                try {
-                    $invitation->projects()->detach();
-                } catch (\Exception $e) {
-                    \Log::warning('Erreur lors du détachement des projets: ' . $e->getMessage());
-                }
+            try {
+                // S'assurer que project_ids est un tableau
+                $projectIds = isset($validated['project_ids']) && is_array($validated['project_ids']) 
+                    ? array_filter($validated['project_ids']) // Filtrer les valeurs vides
+                    : [];
+                
+                // Synchroniser tous les projets sélectionnés
+                $invitation->projects()->sync($projectIds);
+                
+                \Log::info('Projets synchronisés pour l\'invitation', [
+                    'invitation_id' => $invitation->id,
+                    'project_ids' => $projectIds,
+                    'count' => count($projectIds)
+                ]);
+            } catch (\Exception $e) {
+                \Log::error('Erreur lors de la synchronisation des projets: ' . $e->getMessage(), [
+                    'invitation_id' => $invitation->id,
+                    'trace' => $e->getTraceAsString()
+                ]);
             }
         }
 
@@ -644,24 +684,43 @@ class InvitationController extends Controller
         if ($invitation->status === 'accepted') {
             $invitedUser = User::where('email', $invitation->email)->first();
             if ($invitedUser) {
+                // S'assurer que project_ids est un tableau
+                $newProjectIds = isset($validated['project_ids']) && is_array($validated['project_ids']) 
+                    ? array_filter($validated['project_ids']) // Filtrer les valeurs vides
+                    : [];
+                
                 // Retirer l'utilisateur des anciens projets qui ne sont plus dans la liste
-                $projectsToRemove = array_diff($oldProjectIds, $validated['project_ids'] ?? []);
+                $projectsToRemove = array_diff($oldProjectIds, $newProjectIds);
                 foreach ($projectsToRemove as $projectId) {
                     $project = \App\Models\Project::find($projectId);
                     if ($project) {
                         $project->users()->detach($invitedUser->id);
+                        \Log::info('Utilisateur retiré du projet', [
+                            'user_id' => $invitedUser->id,
+                            'project_id' => $projectId
+                        ]);
                     }
                 }
                 
-                // Ajouter l'utilisateur aux nouveaux projets
-                if (isset($validated['project_ids']) && !empty($validated['project_ids'])) {
-                    foreach ($validated['project_ids'] as $projectId) {
-                        $project = \App\Models\Project::find($projectId);
-                        if ($project && !$project->users()->where('users.id', $invitedUser->id)->exists()) {
-                            $project->users()->attach($invitedUser->id);
-                        }
+                // Ajouter l'utilisateur aux nouveaux projets (tous les projets sélectionnés)
+                foreach ($newProjectIds as $projectId) {
+                    $project = \App\Models\Project::find($projectId);
+                    if ($project && !$project->users()->where('users.id', $invitedUser->id)->exists()) {
+                        $project->users()->attach($invitedUser->id);
+                        \Log::info('Utilisateur ajouté au projet', [
+                            'user_id' => $invitedUser->id,
+                            'project_id' => $projectId
+                        ]);
                     }
                 }
+                
+                \Log::info('Mise à jour des associations projet-utilisateur terminée', [
+                    'user_id' => $invitedUser->id,
+                    'old_project_ids' => $oldProjectIds,
+                    'new_project_ids' => $newProjectIds,
+                    'removed_count' => count($projectsToRemove),
+                    'added_count' => count($newProjectIds)
+                ]);
             }
         }
 
