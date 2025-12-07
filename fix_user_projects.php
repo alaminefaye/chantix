@@ -1,8 +1,7 @@
 <?php
 /**
  * Script pour corriger les projets assignés à un utilisateur
- * Synchronise project_user avec les projets de l'invitation
- * Usage: php fix_user_projects.php email@example.com [--dry-run]
+ * Usage: php fix_user_projects.php email@example.com
  */
 
 require __DIR__.'/vendor/autoload.php';
@@ -14,14 +13,7 @@ use App\Models\User;
 use App\Models\Invitation;
 use Illuminate\Support\Facades\DB;
 
-$email = $argv[1] ?? null;
-$dryRun = in_array('--dry-run', $argv);
-
-if (!$email) {
-    echo "Usage: php fix_user_projects.php email@example.com [--dry-run]\n";
-    echo "  --dry-run : Affiche ce qui sera fait sans modifier la base de données\n";
-    exit(1);
-}
+$email = $argv[1] ?? 'aminefaye@gmail.com';
 
 echo "=== Correction des projets pour {$email} ===\n\n";
 
@@ -34,13 +26,14 @@ if (!$user) {
 echo "Utilisateur: {$user->name} ({$user->email})\n";
 echo "ID: {$user->id}\n\n";
 
-// 1. Récupérer les projets dans l'invitation
+// Récupérer l'invitation
 $invitation = Invitation::where('email', $user->email)->first();
 if (!$invitation) {
-    echo "⚠ Aucune invitation trouvée pour cet utilisateur\n";
+    echo "❌ Aucune invitation trouvée\n";
     exit(1);
 }
 
+// Récupérer les projets de l'invitation
 $invitationProjects = $invitation->getProjectsDirectly();
 $invitationProjectIds = $invitationProjects->pluck('id')->toArray();
 
@@ -51,7 +44,7 @@ foreach ($invitationProjectIds as $projectId) {
     echo "  ✓ {$project->name} (ID: {$projectId})\n";
 }
 
-// 2. Récupérer les projets actuels dans project_user
+// Récupérer les projets actuels dans project_user
 $currentProjectIds = DB::table('project_user')
     ->where('user_id', $user->id)
     ->pluck('project_id')
@@ -61,88 +54,74 @@ echo "\n--- Projets actuels dans project_user ---\n";
 echo "Nombre: " . count($currentProjectIds) . "\n";
 foreach ($currentProjectIds as $projectId) {
     $project = \App\Models\Project::find($projectId);
-    echo "  ✓ {$project->name} (ID: {$projectId})\n";
+    echo "  - {$project->name} (ID: {$projectId})\n";
 }
 
-// 3. Identifier les différences
-$toAdd = array_diff($invitationProjectIds, $currentProjectIds);
-$toRemove = array_diff($currentProjectIds, $invitationProjectIds);
+// Identifier les projets à supprimer
+$projectsToRemove = array_diff($currentProjectIds, $invitationProjectIds);
 
-echo "\n--- Actions à effectuer ---\n";
-
-if (empty($toAdd) && empty($toRemove)) {
-    echo "✓ Aucune action nécessaire - Les projets sont déjà synchronisés\n";
-    exit(0);
+if (!empty($projectsToRemove)) {
+    echo "\n--- Projets à supprimer ---\n";
+    foreach ($projectsToRemove as $projectId) {
+        $project = \App\Models\Project::find($projectId);
+        echo "  ✗ {$project->name} (ID: {$projectId})\n";
+    }
+    
+    echo "\n⚠ Suppression des projets non désirés...\n";
+    DB::table('project_user')
+        ->where('user_id', $user->id)
+        ->whereIn('project_id', $projectsToRemove)
+        ->delete();
+    
+    echo "✓ Projets supprimés\n";
+} else {
+    echo "\n✓ Aucun projet à supprimer\n";
 }
 
-if (!empty($toAdd)) {
-    echo "Projets à AJOUTER:\n";
-    foreach ($toAdd as $projectId) {
+// Identifier les projets à ajouter
+$projectsToAdd = array_diff($invitationProjectIds, $currentProjectIds);
+
+if (!empty($projectsToAdd)) {
+    echo "\n--- Projets à ajouter ---\n";
+    foreach ($projectsToAdd as $projectId) {
         $project = \App\Models\Project::find($projectId);
         echo "  + {$project->name} (ID: {$projectId})\n";
     }
-}
-
-if (!empty($toRemove)) {
-    echo "Projets à SUPPRIMER:\n";
-    foreach ($toRemove as $projectId) {
-        $project = \App\Models\Project::find($projectId);
-        echo "  - {$project->name} (ID: {$projectId})\n";
+    
+    echo "\n⚠ Ajout des projets manquants...\n";
+    foreach ($projectsToAdd as $projectId) {
+        DB::table('project_user')->insert([
+            'user_id' => $user->id,
+            'project_id' => $projectId,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
-}
-
-// 4. Appliquer les corrections
-if ($dryRun) {
-    echo "\n⚠ Mode DRY-RUN - Aucune modification ne sera effectuée\n";
+    
+    echo "✓ Projets ajoutés\n";
 } else {
-    echo "\n--- Application des corrections ---\n";
-    
-    // Supprimer les projets non désirés
-    if (!empty($toRemove)) {
-        foreach ($toRemove as $projectId) {
-            DB::table('project_user')
-                ->where('user_id', $user->id)
-                ->where('project_id', $projectId)
-                ->delete();
-            $project = \App\Models\Project::find($projectId);
-            echo "  ✓ Supprimé: {$project->name}\n";
-        }
-    }
-    
-    // Ajouter les projets manquants
-    if (!empty($toAdd)) {
-        foreach ($toAdd as $projectId) {
-            DB::table('project_user')->insert([
-                'user_id' => $user->id,
-                'project_id' => $projectId,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-            $project = \App\Models\Project::find($projectId);
-            echo "  ✓ Ajouté: {$project->name}\n";
-        }
-    }
-    
-    echo "\n✓ Correction terminée!\n";
-    
-    // Vérification finale
-    $finalProjectIds = DB::table('project_user')
-        ->where('user_id', $user->id)
-        ->pluck('project_id')
-        ->toArray();
-    
-    echo "\n--- Vérification finale ---\n";
-    echo "Projets dans project_user: " . count($finalProjectIds) . "\n";
-    foreach ($finalProjectIds as $projectId) {
-        $project = \App\Models\Project::find($projectId);
-        echo "  ✓ {$project->name} (ID: {$projectId})\n";
-    }
-    
-    if ($finalProjectIds === $invitationProjectIds) {
-        echo "\n✅ Synchronisation réussie!\n";
-    } else {
-        echo "\n⚠ ATTENTION: Il reste des différences\n";
-    }
+    echo "\n✓ Aucun projet à ajouter\n";
 }
 
-echo "\n=== Fin ===\n";
+// Vérification finale
+echo "\n--- Vérification finale ---\n";
+$finalProjectIds = DB::table('project_user')
+    ->where('user_id', $user->id)
+    ->pluck('project_id')
+    ->toArray();
+
+echo "Nombre de projets après correction: " . count($finalProjectIds) . "\n";
+foreach ($finalProjectIds as $projectId) {
+    $project = \App\Models\Project::find($projectId);
+    echo "  ✓ {$project->name} (ID: {$projectId})\n";
+}
+
+// Vérifier la cohérence
+if (count($finalProjectIds) === count($invitationProjectIds) && 
+    empty(array_diff($finalProjectIds, $invitationProjectIds))) {
+    echo "\n✅ CORRECTION RÉUSSIE: Les projets correspondent maintenant à l'invitation\n";
+} else {
+    echo "\n⚠ ATTENTION: Il y a encore des différences\n";
+}
+
+echo "\n=== Fin de la correction ===\n";

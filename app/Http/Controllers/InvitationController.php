@@ -722,47 +722,64 @@ class InvitationController extends Controller
                     : [];
                 
                 // Retirer l'utilisateur des anciens projets qui ne sont plus dans la liste
+                // Utiliser des requêtes directes pour éviter les problèmes de cache
                 $projectsToRemove = array_diff($oldProjectIds, $newProjectIds);
-                foreach ($projectsToRemove as $projectId) {
-                    $project = \App\Models\Project::find($projectId);
-                    if ($project) {
-                        $project->users()->detach($invitedUser->id);
-                        \Log::info('Utilisateur retiré du projet', [
-                            'user_id' => $invitedUser->id,
-                            'project_id' => $projectId
-                        ]);
-                    }
+                if (!empty($projectsToRemove)) {
+                    $deleted = DB::table('project_user')
+                        ->where('user_id', $invitedUser->id)
+                        ->whereIn('project_id', $projectsToRemove)
+                        ->delete();
+                    
+                    \Log::info('Utilisateur retiré des projets (update invitation)', [
+                        'user_id' => $invitedUser->id,
+                        'project_ids_removed' => $projectsToRemove,
+                        'count_removed' => $deleted
+                    ]);
                 }
                 
                 // Ajouter l'utilisateur aux nouveaux projets (tous les projets sélectionnés)
-                foreach ($newProjectIds as $projectId) {
-                    // Vérifier directement dans la DB pour éviter les problèmes de cache
-                    $exists = DB::table('project_user')
-                        ->where('user_id', $invitedUser->id)
-                        ->where('project_id', $projectId)
-                        ->exists();
-                    
-                    if (!$exists) {
-                        DB::table('project_user')->insert([
-                            'user_id' => $invitedUser->id,
-                            'project_id' => $projectId,
-                            'created_at' => now(),
-                            'updated_at' => now(),
-                        ]);
+                $projectsToAdd = array_diff($newProjectIds, $oldProjectIds);
+                if (!empty($projectsToAdd)) {
+                    foreach ($projectsToAdd as $projectId) {
+                        // Vérifier directement dans la DB pour éviter les problèmes de cache
+                        $exists = DB::table('project_user')
+                            ->where('user_id', $invitedUser->id)
+                            ->where('project_id', $projectId)
+                            ->exists();
                         
-                        \Log::info('Utilisateur ajouté au projet (update invitation)', [
-                            'user_id' => $invitedUser->id,
-                            'project_id' => $projectId
-                        ]);
+                        if (!$exists) {
+                            DB::table('project_user')->insert([
+                                'user_id' => $invitedUser->id,
+                                'project_id' => $projectId,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ]);
+                        }
                     }
+                    
+                    \Log::info('Utilisateur ajouté aux projets (update invitation)', [
+                        'user_id' => $invitedUser->id,
+                        'project_ids_added' => $projectsToAdd,
+                        'count_added' => count($projectsToAdd)
+                    ]);
                 }
+                
+                // Vérification finale : s'assurer que project_user correspond exactement à l'invitation
+                $finalProjectIds = DB::table('project_user')
+                    ->where('user_id', $invitedUser->id)
+                    ->pluck('project_id')
+                    ->toArray();
                 
                 \Log::info('Mise à jour des associations projet-utilisateur terminée', [
                     'user_id' => $invitedUser->id,
                     'old_project_ids' => $oldProjectIds,
                     'new_project_ids' => $newProjectIds,
+                    'final_project_ids' => $finalProjectIds,
                     'removed_count' => count($projectsToRemove),
-                    'added_count' => count($newProjectIds)
+                    'added_count' => count($projectsToAdd ?? []),
+                    'final_count' => count($finalProjectIds),
+                    'matches_invitation' => empty(array_diff($finalProjectIds, $newProjectIds)) && 
+                                          empty(array_diff($newProjectIds, $finalProjectIds))
                 ]);
             }
         }
