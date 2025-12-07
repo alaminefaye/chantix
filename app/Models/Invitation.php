@@ -110,8 +110,14 @@ class Invitation extends Model
             $projects = collect();
             foreach ($projectsData as $projectData) {
                 $project = new Project();
-                $project->fill((array) $projectData);
+                // Convertir l'objet stdClass en tableau
+                $dataArray = is_object($projectData) ? (array) $projectData : $projectData;
+                $project->fill($dataArray);
                 $project->exists = true;
+                // S'assurer que l'ID est bien défini
+                if (isset($dataArray['id'])) {
+                    $project->id = (int) $dataArray['id'];
+                }
                 $projects->push($project);
             }
 

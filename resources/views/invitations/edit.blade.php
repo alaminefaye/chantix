@@ -78,14 +78,46 @@
             <div class="col-md-6">
               <div class="mb-3">
                 <label for="project_ids" class="form-label">Projets <span class="text-muted">(optionnel)</span></label>
+                @php
+                  // S'assurer que selectedProjectIds est un tableau d'entiers
+                  $selectedIds = [];
+                  if (isset($selectedProjectIds) && is_array($selectedProjectIds)) {
+                    $selectedIds = array_map('intval', $selectedProjectIds);
+                  }
+                  // Gérer aussi old() pour les erreurs de validation
+                  $oldIds = old('project_ids', []);
+                  if (!empty($oldIds)) {
+                    $oldIds = array_map('intval', (array)$oldIds);
+                    $selectedIds = array_unique(array_merge($selectedIds, $oldIds));
+                  }
+                  
+                  // Debug (peut être commenté après vérification)
+                  \Log::debug('Formulaire edit - Projets sélectionnés', [
+                    'invitation_id' => $invitation->id,
+                    'selectedProjectIds' => $selectedProjectIds ?? null,
+                    'selectedIds' => $selectedIds,
+                    'old_ids' => $oldIds
+                  ]);
+                @endphp
                 <select class="form-select @error('project_ids') is-invalid @enderror" id="project_ids" name="project_ids[]" multiple size="5">
                   @foreach($projects as $project)
-                    <option value="{{ $project->id }}" {{ in_array($project->id, old('project_ids', $selectedProjectIds ?? [])) ? 'selected' : '' }}>
+                    @php
+                      $isSelected = in_array((int)$project->id, $selectedIds, true);
+                    @endphp
+                    <option value="{{ $project->id }}" {{ $isSelected ? 'selected' : '' }}>
                       {{ $project->name }}
                     </option>
                   @endforeach
                 </select>
                 <small class="text-muted">Sélectionnez un ou plusieurs projets. Si aucun projet n'est sélectionné, l'utilisateur aura accès à tous les projets de l'entreprise. Maintenez Ctrl (ou Cmd sur Mac) pour sélectionner plusieurs projets.</small>
+                @if(!empty($selectedIds))
+                  <div class="mt-1">
+                    <small class="text-info">
+                      <i class="ti ti-info-circle"></i> 
+                      {{ count($selectedIds) }} projet(s) actuellement sélectionné(s)
+                    </small>
+                  </div>
+                @endif
                 @error('project_ids')
                   <div class="invalid-feedback">{{ $message }}</div>
                 @enderror

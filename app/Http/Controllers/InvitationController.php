@@ -504,13 +504,30 @@ class InvitationController extends Controller
         $projects = $company->projects()->orderBy('name')->get();
 
         // Récupérer les IDs des projets associés en utilisant la méthode directe
+        // FORCER le rechargement en vidant d'abord la relation
+        $invitation->unsetRelation('projects');
         $invitationProjects = $invitation->getProjectsDirectly();
-        $selectedProjectIds = $invitationProjects->pluck('id')->toArray();
+        
+        // Extraire les IDs manuellement pour être sûr que ça fonctionne
+        $selectedProjectIds = [];
+        foreach ($invitationProjects as $project) {
+            if (isset($project->id)) {
+                $selectedProjectIds[] = (int) $project->id;
+            }
+        }
+        
+        // Alternative: utiliser pluck si disponible
+        if (empty($selectedProjectIds) && method_exists($invitationProjects, 'pluck')) {
+            $selectedProjectIds = $invitationProjects->pluck('id')->toArray();
+            $selectedProjectIds = array_map('intval', $selectedProjectIds);
+        }
         
         \Log::info('Projets chargés pour l\'invitation (edit)', [
             'invitation_id' => $invitation->id,
             'project_ids' => $selectedProjectIds,
-            'count' => count($selectedProjectIds)
+            'count' => count($selectedProjectIds),
+            'project_names' => $invitationProjects->map(function($p) { return $p->name ?? 'N/A'; })->toArray(),
+            'projects_count' => $invitationProjects->count()
         ]);
 
         return view('invitations.edit', compact('company', 'invitation', 'roles', 'projects', 'selectedProjectIds'));
