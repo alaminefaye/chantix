@@ -113,7 +113,13 @@ class AttendanceController extends Controller
         $user = Auth::user();
         $companyId = $user->current_company_id;
 
+        \Log::info('Check-in - Vérification entreprise', [
+            'company_id' => $companyId,
+            'user_id' => $user->id,
+        ]);
+
         if (!$companyId) {
+            \Log::warning('Check-in - Aucune entreprise sélectionnée', ['user_id' => $user->id]);
             return response()->json([
                 'success' => false,
                 'message' => 'Veuillez sélectionner une entreprise.',
@@ -122,7 +128,17 @@ class AttendanceController extends Controller
 
         $project = Project::forCompany($companyId)->find($projectId);
 
+        \Log::info('Check-in - Vérification projet', [
+            'project_id' => $projectId,
+            'company_id' => $companyId,
+            'project_found' => $project ? 'yes' : 'no',
+        ]);
+
         if (!$project) {
+            \Log::warning('Check-in - Projet non trouvé', [
+                'project_id' => $projectId,
+                'company_id' => $companyId,
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Projet non trouvé.',
@@ -136,6 +152,7 @@ class AttendanceController extends Controller
         ]);
 
         if ($validator->fails()) {
+            \Log::warning('Check-in - Validation échouée', ['errors' => $validator->errors()->toArray()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Les données fournies sont invalides.',
@@ -148,7 +165,18 @@ class AttendanceController extends Controller
             ->where('email', $user->email)
             ->first();
 
+        \Log::info('Check-in - Vérification employé', [
+            'user_email' => $user->email,
+            'company_id' => $companyId,
+            'employee_found' => $employee ? 'yes' : 'no',
+            'employee_id' => $employee?->id,
+        ]);
+
         if (!$employee) {
+            \Log::warning('Check-in - Aucun employé trouvé', [
+                'user_email' => $user->email,
+                'company_id' => $companyId,
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Aucun employé trouvé associé à votre compte. Veuillez contacter l\'administrateur.',
@@ -195,6 +223,11 @@ class AttendanceController extends Controller
         $attendance->is_present = true;
         $attendance->save();
 
+        \Log::info('Check-in - Pointage sauvegardé', [
+            'attendance_id' => $attendance->id,
+            'check_in_time' => $attendance->check_in,
+        ]);
+
         // Formater la réponse
         $formattedAttendance = [
             'id' => $attendance->id,
@@ -209,6 +242,11 @@ class AttendanceController extends Controller
             'is_absence' => false,
             'created_at' => $attendance->created_at->toIso8601String(),
         ];
+
+        \Log::info('Check-in - Réponse envoyée', [
+            'attendance_id' => $attendance->id,
+            'status_code' => 201,
+        ]);
 
         return response()->json([
             'success' => true,
