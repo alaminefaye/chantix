@@ -73,44 +73,33 @@
                   <td class="border-bottom-0">
                     @php
                       $invitationProjects = collect([]);
-                      // Prioriser toujours la relation many-to-many projects
+                      // TOUJOURS utiliser une requête directe sur la table pivot pour éviter les problèmes de cache
                       if (\Illuminate\Support\Facades\Schema::hasTable('invitation_project')) {
                         try {
-                          // Méthode 1: Utiliser la relation Eloquent
-                          $invitation->load('projects');
-                          $invitationProjects = $invitation->projects;
-                          
-                          // Si la relation ne retourne rien ou moins de projets que dans la DB, essayer une requête directe sur la table pivot
+                          // Requête directe sur la table pivot (ne dépend pas du cache Eloquent)
                           $directProjectIds = \Illuminate\Support\Facades\DB::table('invitation_project')
                             ->where('invitation_id', $invitation->id)
                             ->pluck('project_id')
                             ->toArray();
                           
-                          // Si on trouve plus de projets dans la DB que dans la relation, utiliser la DB
-                          if (count($directProjectIds) > $invitationProjects->count()) {
+                          // Récupérer les projets directement depuis la DB
+                          if (!empty($directProjectIds)) {
                             $invitationProjects = \App\Models\Project::whereIn('id', $directProjectIds)->get();
-                            \Log::debug('Projets récupérés directement depuis la DB pour invitation ' . $invitation->id, [
-                              'count' => $invitationProjects->count(),
-                              'project_ids' => $directProjectIds
-                            ]);
                           }
-                          
-                          // Debug: logger pour vérifier
-                          \Log::debug('Projets chargés pour invitation ' . $invitation->id, [
-                            'count' => $invitationProjects->count(),
-                            'project_ids' => $invitationProjects->pluck('id')->toArray(),
-                            'project_names' => $invitationProjects->pluck('name')->toArray(),
-                            'relation_loaded' => $invitation->relationLoaded('projects')
-                          ]);
                         } catch (\Exception $e) {
-                          \Log::error('Erreur lors du chargement des projets de l\'invitation ' . $invitation->id . ': ' . $e->getMessage(), [
-                            'trace' => $e->getTraceAsString()
-                          ]);
+                          \Log::error('Erreur lors du chargement des projets de l\'invitation ' . $invitation->id . ': ' . $e->getMessage());
+                          // Fallback: essayer avec la relation Eloquent
+                          try {
+                            $invitation->load('projects');
+                            $invitationProjects = $invitation->projects;
+                          } catch (\Exception $e2) {
+                            \Log::error('Erreur avec la relation Eloquent: ' . $e2->getMessage());
+                          }
                         }
                       }
                       
                       // Fallback: utiliser project_id seulement si la relation many-to-many est vide
-                      if ($invitationProjects->isEmpty() && $invitation->project_id) {
+                      if ($invitationProjects->isEmpty() && isset($invitation->project_id) && $invitation->project_id) {
                         $project = \App\Models\Project::find($invitation->project_id);
                         if ($project) {
                           $invitationProjects = collect([$project]);

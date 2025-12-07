@@ -65,33 +65,32 @@ class InvitationController extends Controller
             ->paginate(20);
         
         // S'assurer que la relation projects est bien chargée pour toutes les invitations
+        // Utiliser une requête directe pour éviter les problèmes de cache sur le serveur
         if (Schema::hasTable('invitation_project')) {
             foreach ($invitations as $invitation) {
                 try {
-                    // Toujours recharger pour être sûr d'avoir les dernières données
-                    $invitation->load('projects');
-                    
-                    // Vérification supplémentaire: requête directe sur la table pivot
+                    // Requête directe sur la table pivot (ne dépend pas du cache)
                     $directProjectIds = \DB::table('invitation_project')
                         ->where('invitation_id', $invitation->id)
                         ->pluck('project_id')
                         ->toArray();
                     
-                    // Si la relation ne retourne pas tous les projets, recharger depuis la DB
-                    if (count($directProjectIds) > $invitation->projects->count()) {
-                        $invitation->setRelation('projects', \App\Models\Project::whereIn('id', $directProjectIds)->get());
+                    // Charger les projets directement depuis la DB et définir la relation
+                    if (!empty($directProjectIds)) {
+                        $projects = \App\Models\Project::whereIn('id', $directProjectIds)->get();
+                        $invitation->setRelation('projects', $projects);
+                    } else {
+                        // Si aucun projet dans la table pivot, charger la relation vide
+                        $invitation->setRelation('projects', collect([]));
                     }
-                    
-                    // Debug: vérifier combien de projets sont chargés
-                    \Log::debug('Invitation ' . $invitation->id . ' - Projets chargés', [
-                        'count_relation' => $invitation->projects->count(),
-                        'count_direct' => count($directProjectIds),
-                        'project_ids_relation' => $invitation->projects->pluck('id')->toArray(),
-                        'project_ids_direct' => $directProjectIds,
-                        'project_names' => $invitation->projects->pluck('name')->toArray()
-                    ]);
                 } catch (\Exception $e) {
                     \Log::warning('Erreur lors du chargement des projets pour l\'invitation ' . $invitation->id . ': ' . $e->getMessage());
+                    // Fallback: essayer avec la relation Eloquent
+                    try {
+                        $invitation->load('projects');
+                    } catch (\Exception $e2) {
+                        $invitation->setRelation('projects', collect([]));
+                    }
                 }
             }
         }
@@ -526,15 +525,15 @@ class InvitationController extends Controller
         $projects = $company->projects()->orderBy('name')->get();
 
         // Récupérer les IDs des projets associés de manière sécurisée
+        // Utiliser une requête directe pour éviter les problèmes de cache
         $selectedProjectIds = [];
         try {
             if (Schema::hasTable('invitation_project')) {
-                // Charger la relation si elle n'est pas déjà chargée
-                if (!$invitation->relationLoaded('projects')) {
-                    $invitation->load('projects');
-                }
-                // Récupérer TOUS les IDs des projets associés (many-to-many)
-                $selectedProjectIds = $invitation->projects->pluck('id')->toArray();
+                // Requête directe sur la table pivot (ne dépend pas du cache)
+                $selectedProjectIds = DB::table('invitation_project')
+                    ->where('invitation_id', $invitation->id)
+                    ->pluck('project_id')
+                    ->toArray();
                 
                 \Log::info('Projets chargés pour l\'invitation (edit)', [
                     'invitation_id' => $invitation->id,
@@ -639,15 +638,15 @@ class InvitationController extends Controller
         }
 
         // Récupérer les anciens projets de manière sécurisée AVANT la mise à jour
+        // Utiliser une requête directe pour éviter les problèmes de cache
         $oldProjectIds = [];
         try {
             if (Schema::hasTable('invitation_project')) {
-                // Charger la relation si elle n'est pas déjà chargée
-                if (!$invitation->relationLoaded('projects')) {
-                    $invitation->load('projects');
-                }
-                // Récupérer TOUS les IDs des anciens projets (many-to-many)
-                $oldProjectIds = $invitation->projects->pluck('id')->toArray();
+                // Requête directe sur la table pivot (ne dépend pas du cache)
+                $oldProjectIds = DB::table('invitation_project')
+                    ->where('invitation_id', $invitation->id)
+                    ->pluck('project_id')
+                    ->toArray();
                 
                 \Log::info('Anciens projets récupérés pour l\'invitation (update)', [
                     'invitation_id' => $invitation->id,
@@ -702,15 +701,30 @@ class InvitationController extends Controller
                 // Synchroniser tous les projets sélectionnés
                 $invitation->projects()->sync($projectIds);
                 
-                // Recharger la relation pour vérifier
-                $invitation->load('projects');
+                // Vider le cache de la relation pour forcer le rechargement
+                $invitation->unsetRelation('projects');
+                
+                // Vérifier directement dans la DB pour éviter les problèmes de cache
+                $syncedProjectIds = DB::table('invitation_project')
+                    ->where('invitation_id', $invitation->id)
+                    ->pluck('project_id')
+                    ->toArray();
+                
+                // Recharger la relation avec les données de la DB
+                if (!empty($syncedProjectIds)) {
+                    $projects = \App\Models\Project::whereIn('id', $syncedProjectIds)->get();
+                    $invitation->setRelation('projects', $projects);
+                } else {
+                    $invitation->setRelation('projects', collect([]));
+                }
                 
                 \Log::info('Projets synchronisés pour l\'invitation', [
                     'invitation_id' => $invitation->id,
                     'project_ids_synced' => $projectIds,
-                    'projects_after_sync' => $invitation->projects->pluck('id')->toArray(),
+                    'project_ids_in_db' => $syncedProjectIds,
                     'projects_names' => $invitation->projects->pluck('name')->toArray(),
                     'count_synced' => count($projectIds),
+                    'count_in_db' => count($syncedProjectIds),
                     'count_loaded' => $invitation->projects->count()
                 ]);
             } catch (\Exception $e) {
