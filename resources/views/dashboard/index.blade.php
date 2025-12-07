@@ -382,7 +382,7 @@
         foreColor: "#adb0bb",
         fontFamily: 'inherit',
       },
-      colors: ["#5D87FF", "#49BEFF", "#13DEB9", "#FFAE1F"],
+      colors: ["#B41839", "#3F1B3D", "#13DEB9", "#FFAE1F"],
       plotOptions: {
         bar: {
           horizontal: false,

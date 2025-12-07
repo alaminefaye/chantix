@@ -25,9 +25,9 @@ $green: #13DEB9 !default;
 $teal: #20c997 !default;
 $cyan: #539BFF !default;
 
-// Main Colors
-$primary: $blue !default;
-$secondary: #49BEFF !default;
+// Main Colors - Couleurs de l'application mobile
+$primary: #B41839 !default; // Rouge/Marron principal de l'app mobile
+$secondary: #3F1B3D !default; // Violet foncé secondaire de l'app mobile
 $success: $green !default;
 $info: $cyan !default;
 $warning: $yellow !default;
@@ -38,9 +38,9 @@ $dark: $gray-600 !default;
 $dark-light: $gray-600 !default;
 $light-gray: $gray-100 !default;
 
-// light colors
-$light-primary: #ECF2FF;
-$light-secondary: #E8F7FF;
+// light colors - Variantes légères des couleurs de l'app mobile
+$light-primary: #F5E6EA; // Version claire du rouge/marron principal
+$light-secondary: #E8E0E8; // Version claire du violet foncé
 $light-info: #EBF3FE;
 $light-success: #E6FFFA;
 $light-warning: #FEF5E5;

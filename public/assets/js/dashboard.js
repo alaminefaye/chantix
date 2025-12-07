@@ -21,7 +21,7 @@ $(function () {
     },
 
 
-    colors: ["#5D87FF", "#49BEFF"],
+    colors: ["#B41839", "#3F1B3D"],
 
 
     plotOptions: {
@@ -138,7 +138,7 @@ $(function () {
     legend: {
       show: false,
     },
-    colors: ["#5D87FF", "#ecf2ff", "#F9F9FD"],
+    colors: ["#B41839", "#F5E6EA", "#F9F9FD"],
 
     responsive: [
       {
@@ -179,7 +179,7 @@ $(function () {
     series: [
       {
         name: "Earnings",
-        color: "#49BEFF",
+        color: "#3F1B3D",
         data: [25, 66, 20, 40, 12, 58, 20],
       },
     ],

@@ -629,13 +629,13 @@
         datasets: [{
           label: 'Avancement (%)',
           data: progressValues,
-          borderColor: '#5D87FF',
-          backgroundColor: 'rgba(93, 135, 255, 0.1)',
+          borderColor: '#B41839',
+          backgroundColor: 'rgba(180, 24, 57, 0.1)',
           tension: 0.4,
           fill: true,
           pointRadius: 5,
           pointHoverRadius: 7,
-          pointBackgroundColor: '#5D87FF',
+          pointBackgroundColor: '#B41839',
           pointBorderColor: '#fff',
           pointBorderWidth: 2
         }]
@@ -694,8 +694,8 @@
         datasets: [{
           data: {!! json_encode(array_values($expensesByType)) !!},
           backgroundColor: [
-            '#5D87FF',
-            '#49BEFF',
+            '#B41839',
+            '#3F1B3D',
             '#13DEB9',
             '#FFAE1F',
             '#FA896B'
@@ -721,8 +721,8 @@
         datasets: [{
           label: 'Dépenses (FCFA)',
           data: {!! json_encode(array_values($expensesByMonth)) !!},
-          borderColor: '#5D87FF',
-          backgroundColor: 'rgba(93, 135, 255, 0.1)',
+          borderColor: '#B41839',
+          backgroundColor: 'rgba(180, 24, 57, 0.1)',
           tension: 0.4,
           fill: true
         }]
