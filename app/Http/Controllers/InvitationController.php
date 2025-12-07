@@ -206,9 +206,19 @@ class InvitationController extends Controller
                     if (isset($validated['project_ids']) && !empty($validated['project_ids'])) {
                         $projectIds = $validated['project_ids'];
                         foreach ($projectIds as $projectId) {
-                            $project = \App\Models\Project::find($projectId);
-                            if ($project && !$project->users()->where('users.id', $existingUser->id)->exists()) {
-                                $project->users()->attach($existingUser->id);
+                            // Vérifier directement dans la DB
+                            $exists = DB::table('project_user')
+                                ->where('user_id', $existingUser->id)
+                                ->where('project_id', $projectId)
+                                ->exists();
+                            
+                            if (!$exists) {
+                                DB::table('project_user')->insert([
+                                    'user_id' => $existingUser->id,
+                                    'project_id' => $projectId,
+                                    'created_at' => now(),
+                                    'updated_at' => now(),
+                                ]);
                             }
                         }
                     }
@@ -382,19 +392,39 @@ class InvitationController extends Controller
         $invitationProjects = $invitation->getProjectsDirectly();
         
         if ($invitationProjects->count() > 0) {
-            foreach ($invitationProjects as $project) {
-                if (!$project->users()->where('users.id', $user->id)->exists()) {
-                    $project->users()->attach($user->id);
+            // Associer l'utilisateur à TOUS les projets de l'invitation
+            $projectIds = $invitationProjects->pluck('id')->toArray();
+            
+            foreach ($projectIds as $projectId) {
+                // Vérifier directement dans la DB pour éviter les problèmes de cache
+                $exists = DB::table('project_user')
+                    ->where('user_id', $user->id)
+                    ->where('project_id', $projectId)
+                    ->exists();
+                
+                if (!$exists) {
+                    DB::table('project_user')->insert([
+                        'user_id' => $user->id,
+                        'project_id' => $projectId,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
                 }
             }
+            
+            \Log::info('Projets associés à l\'utilisateur lors de l\'acceptation de l\'invitation', [
+                'user_id' => $user->id,
+                'invitation_id' => $invitation->id,
+                'project_ids' => $projectIds,
+                'count' => count($projectIds)
+            ]);
         } else {
-            // Fallback: utiliser l'ancienne colonne project_id si elle existe
-            if ($invitation->project_id) {
-                $project = \App\Models\Project::find($invitation->project_id);
-                if ($project && !$project->users()->where('users.id', $user->id)->exists()) {
-                    $project->users()->attach($user->id);
-                }
-            }
+            // Si aucun projet spécifique n'est assigné dans l'invitation,
+            // l'utilisateur n'a accès à AUCUN projet (sécurité)
+            \Log::info('Aucun projet assigné dans l\'invitation - utilisateur sans accès projet', [
+                'user_id' => $user->id,
+                'invitation_id' => $invitation->id
+            ]);
         }
 
         // Définir l'entreprise comme actuelle si l'utilisateur n'en a pas
@@ -706,10 +736,21 @@ class InvitationController extends Controller
                 
                 // Ajouter l'utilisateur aux nouveaux projets (tous les projets sélectionnés)
                 foreach ($newProjectIds as $projectId) {
-                    $project = \App\Models\Project::find($projectId);
-                    if ($project && !$project->users()->where('users.id', $invitedUser->id)->exists()) {
-                        $project->users()->attach($invitedUser->id);
-                        \Log::info('Utilisateur ajouté au projet', [
+                    // Vérifier directement dans la DB pour éviter les problèmes de cache
+                    $exists = DB::table('project_user')
+                        ->where('user_id', $invitedUser->id)
+                        ->where('project_id', $projectId)
+                        ->exists();
+                    
+                    if (!$exists) {
+                        DB::table('project_user')->insert([
+                            'user_id' => $invitedUser->id,
+                            'project_id' => $projectId,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                        
+                        \Log::info('Utilisateur ajouté au projet (update invitation)', [
                             'user_id' => $invitedUser->id,
                             'project_id' => $projectId
                         ]);
