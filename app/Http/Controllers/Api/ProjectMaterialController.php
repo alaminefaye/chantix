@@ -135,6 +135,7 @@ class ProjectMaterialController extends Controller
                     'material_id' => $material->id,
                     'material_name' => $material->name,
                     'quantity_planned' => $validator->validated()['quantity_planned'],
+                    'project_id' => $project->id,
                 ],
                 $user->id
             );
@@ -320,6 +321,7 @@ class ProjectMaterialController extends Controller
                 [
                     'material_id' => $material->id,
                     'material_name' => $material->name,
+                    'project_id' => $project->id,
                 ],
                 $user->id
             );
