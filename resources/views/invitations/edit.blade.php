@@ -35,7 +35,7 @@
         @if($invitation->status === 'accepted')
           <div class="alert alert-info alert-dismissible fade show" role="alert">
             <i class="ti ti-info-circle me-2"></i>
-            <strong>Invitation acceptée :</strong> La modification du projet mettra à jour automatiquement l'association de l'utilisateur avec les projets.
+            <strong>Invitation acceptée :</strong> La modification des projets mettra à jour automatiquement l'association de l'utilisateur avec les projets.
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
           </div>
         @endif
@@ -77,17 +77,16 @@
             </div>
             <div class="col-md-6">
               <div class="mb-3">
-                <label for="project_id" class="form-label">Projet <span class="text-muted">(optionnel)</span></label>
-                <select class="form-select @error('project_id') is-invalid @enderror" id="project_id" name="project_id">
-                  <option value="">Tous les projets de l'entreprise</option>
+                <label for="project_ids" class="form-label">Projets <span class="text-muted">(optionnel)</span></label>
+                <select class="form-select @error('project_ids') is-invalid @enderror" id="project_ids" name="project_ids[]" multiple size="5">
                   @foreach($projects as $project)
-                    <option value="{{ $project->id }}" {{ old('project_id', $invitation->project_id) == $project->id ? 'selected' : '' }}>
+                    <option value="{{ $project->id }}" {{ in_array($project->id, old('project_ids', $invitation->projects->pluck('id')->toArray())) ? 'selected' : '' }}>
                       {{ $project->name }}
                     </option>
                   @endforeach
                 </select>
-                <small class="text-muted">Si un projet est sélectionné, l'utilisateur n'aura accès qu'à ce projet.</small>
-                @error('project_id')
+                <small class="text-muted">Sélectionnez un ou plusieurs projets. Si aucun projet n'est sélectionné, l'utilisateur aura accès à tous les projets de l'entreprise. Maintenez Ctrl (ou Cmd sur Mac) pour sélectionner plusieurs projets.</small>
+                @error('project_ids')
                   <div class="invalid-feedback">{{ $message }}</div>
                 @enderror
               </div>

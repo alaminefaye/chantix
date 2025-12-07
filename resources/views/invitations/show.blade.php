@@ -50,6 +50,22 @@
               </p>
             </div>
           </div>
+          <div class="col-12">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Projets</label>
+              <p class="mb-0">
+                @if($invitation->projects->count() > 0)
+                  <div class="d-flex flex-wrap gap-1">
+                    @foreach($invitation->projects as $project)
+                      <span class="badge bg-primary rounded-3 fw-semibold">{{ $project->name }}</span>
+                    @endforeach
+                  </div>
+                @else
+                  <span class="badge bg-secondary rounded-3 fw-semibold">Tous les projets de l'entreprise</span>
+                @endif
+              </p>
+            </div>
+          </div>
           <div class="col-md-6">
             <div class="mb-3">
               <label class="form-label fw-semibold">Invité par</label>

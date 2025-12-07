@@ -51,11 +51,20 @@ class Invitation extends Model
     }
 
     /**
-     * Le projet concerné (optionnel)
+     * Le projet concerné (optionnel) - Relation legacy pour compatibilité
      */
     public function project()
     {
         return $this->belongsTo(Project::class);
+    }
+
+    /**
+     * Les projets concernés (relation many-to-many)
+     */
+    public function projects()
+    {
+        return $this->belongsToMany(Project::class, 'invitation_project')
+                    ->withTimestamps();
     }
 
     /**

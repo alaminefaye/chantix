@@ -42,7 +42,7 @@
                   <h6 class="fw-semibold mb-0">Rôle</h6>
                 </th>
                 <th class="border-bottom-0">
-                  <h6 class="fw-semibold mb-0">Projet</h6>
+                  <h6 class="fw-semibold mb-0">Projets</h6>
                 </th>
                 <th class="border-bottom-0">
                   <h6 class="fw-semibold mb-0">Invité par</h6>
@@ -71,10 +71,14 @@
                     <span class="badge bg-info rounded-3 fw-semibold">{{ $invitation->role->name ?? 'N/A' }}</span>
                   </td>
                   <td class="border-bottom-0">
-                    @if($invitation->project_id && $invitation->project)
-                      <span class="badge bg-primary rounded-3 fw-semibold" title="{{ $invitation->project->name }}">
-                        {{ Str::limit($invitation->project->name, 20) }}
-                      </span>
+                    @if($invitation->projects->count() > 0)
+                      <div class="d-flex flex-wrap gap-1">
+                        @foreach($invitation->projects as $project)
+                          <span class="badge bg-primary rounded-3 fw-semibold" title="{{ $project->name }}">
+                            {{ Str::limit($project->name, 20) }}
+                          </span>
+                        @endforeach
+                      </div>
                     @else
                       <span class="badge bg-secondary rounded-3 fw-semibold">Tous les projets</span>
                     @endif

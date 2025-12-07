@@ -47,7 +47,7 @@ class InvitationController extends Controller
         }
 
         $invitations = $company->invitations()
-            ->with('inviter', 'role', 'project')
+            ->with('inviter', 'role', 'project', 'projects')
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
@@ -99,19 +99,25 @@ class InvitationController extends Controller
         $validated = $request->validate([
             'email' => 'required|email|max:255',
             'role_id' => 'required|integer|exists:roles,id',
-            'project_id' => 'nullable|integer|exists:projects,id',
+            'project_ids' => 'nullable|array',
+            'project_ids.*' => 'integer|exists:projects,id',
             'message' => 'nullable|string|max:1000',
             'create_directly' => 'nullable|boolean', // Option pour créer directement
             'name' => 'nullable|string|max:255|required_if:create_directly,1',
             'password' => 'nullable|string|min:8|required_if:create_directly,1',
         ]);
 
-        // Vérifier que le projet appartient bien à l'entreprise si un projet est sélectionné
-        if (isset($validated['project_id']) && $validated['project_id']) {
-            $project = \App\Models\Project::find($validated['project_id']);
-            if (!$project || $project->company_id != $company->id) {
+        // Vérifier que tous les projets appartiennent bien à l'entreprise
+        if (isset($validated['project_ids']) && !empty($validated['project_ids'])) {
+            $projectIds = $validated['project_ids'];
+            $invalidProjects = \App\Models\Project::whereIn('id', $projectIds)
+                ->where('company_id', '!=', $company->id)
+                ->pluck('id')
+                ->toArray();
+            
+            if (!empty($invalidProjects)) {
                 return redirect()->back()
-                    ->withErrors(['project_id' => 'Le projet sélectionné n\'appartient pas à cette entreprise.'])
+                    ->withErrors(['project_ids' => 'Un ou plusieurs projets sélectionnés n\'appartiennent pas à cette entreprise.'])
                     ->withInput();
             }
         }
@@ -165,11 +171,14 @@ class InvitationController extends Controller
                         'joined_at' => now(),
                     ]);
 
-                    // Associer l'utilisateur au projet si un projet est spécifié
-                    if (isset($validated['project_id']) && $validated['project_id']) {
-                        $project = \App\Models\Project::find($validated['project_id']);
-                        if ($project && !$project->users()->where('users.id', $existingUser->id)->exists()) {
-                            $project->users()->attach($existingUser->id);
+                    // Associer l'utilisateur aux projets si des projets sont spécifiés
+                    if (isset($validated['project_ids']) && !empty($validated['project_ids'])) {
+                        $projectIds = $validated['project_ids'];
+                        foreach ($projectIds as $projectId) {
+                            $project = \App\Models\Project::find($projectId);
+                            if ($project && !$project->users()->where('users.id', $existingUser->id)->exists()) {
+                                $project->users()->attach($existingUser->id);
+                            }
                         }
                     }
 
@@ -213,18 +222,20 @@ class InvitationController extends Controller
                     'joined_at' => now(),
                 ]);
 
-                // Associer l'utilisateur au projet si un projet est spécifié
-                if (isset($validated['project_id']) && $validated['project_id']) {
-                    $project = \App\Models\Project::find($validated['project_id']);
-                    if ($project && !$project->users()->where('users.id', $newUser->id)->exists()) {
-                        $project->users()->attach($newUser->id);
+                // Associer l'utilisateur aux projets si des projets sont spécifiés
+                if (isset($validated['project_ids']) && !empty($validated['project_ids'])) {
+                    $projectIds = $validated['project_ids'];
+                    foreach ($projectIds as $projectId) {
+                        $project = \App\Models\Project::find($projectId);
+                        if ($project && !$project->users()->where('users.id', $newUser->id)->exists()) {
+                            $project->users()->attach($newUser->id);
+                        }
                     }
                 }
 
                 // Créer une invitation marquée comme acceptée pour l'historique
-                Invitation::create([
+                $invitation = Invitation::create([
                     'company_id' => $company->id,
-                    'project_id' => $validated['project_id'] ?? null,
                     'invited_by' => $user->id,
                     'role_id' => $validated['role_id'],
                     'email' => $validated['email'],
@@ -234,6 +245,11 @@ class InvitationController extends Controller
                     'accepted_at' => now(),
                     'message' => $validated['message'] ?? 'Compte créé directement',
                 ]);
+
+                // Associer les projets à l'invitation
+                if (isset($validated['project_ids']) && !empty($validated['project_ids'])) {
+                    $invitation->projects()->sync($validated['project_ids']);
+                }
 
                 return redirect()->route('invitations.index', $company)
                     ->with('success', 'Utilisateur créé et ajouté directement à l\'entreprise avec succès.');
@@ -256,7 +272,6 @@ class InvitationController extends Controller
         // Créer l'invitation
         $invitation = Invitation::create([
             'company_id' => $company->id,
-            'project_id' => $validated['project_id'] ?? null,
             'invited_by' => $user->id,
             'role_id' => $validated['role_id'],
             'email' => $validated['email'],
@@ -265,6 +280,11 @@ class InvitationController extends Controller
             'expires_at' => now()->addDays(7), // Expire dans 7 jours
             'message' => $validated['message'] ?? null,
         ]);
+
+        // Associer les projets à l'invitation
+        if (isset($validated['project_ids']) && !empty($validated['project_ids'])) {
+            $invitation->projects()->sync($validated['project_ids']);
+        }
 
         // Envoyer l'email d'invitation
         try {
@@ -318,11 +338,12 @@ class InvitationController extends Controller
             'joined_at' => now(),
         ]);
 
-        // Associer l'utilisateur au projet si un projet est spécifié dans l'invitation
-        if ($invitation->project_id) {
-            $project = \App\Models\Project::find($invitation->project_id);
-            if ($project && !$project->users()->where('users.id', $user->id)->exists()) {
-                $project->users()->attach($user->id);
+        // Associer l'utilisateur aux projets si des projets sont spécifiés dans l'invitation
+        if ($invitation->projects()->count() > 0) {
+            foreach ($invitation->projects as $project) {
+                if (!$project->users()->where('users.id', $user->id)->exists()) {
+                    $project->users()->attach($user->id);
+                }
             }
         }
 
@@ -377,7 +398,7 @@ class InvitationController extends Controller
             abort(403, 'Seuls les administrateurs peuvent voir les détails des invitations. Votre rôle: ' . ($role ? $role->name : 'aucun'));
         }
 
-        $invitation->load('inviter', 'role', 'company');
+        $invitation->load('inviter', 'role', 'company', 'projects');
 
         return view('invitations.show', compact('company', 'invitation'));
     }
@@ -462,16 +483,22 @@ class InvitationController extends Controller
         $validated = $request->validate([
             'email' => 'required|email|max:255',
             'role_id' => 'required|integer|exists:roles,id',
-            'project_id' => 'nullable|integer|exists:projects,id',
+            'project_ids' => 'nullable|array',
+            'project_ids.*' => 'integer|exists:projects,id',
             'message' => 'nullable|string|max:1000',
         ]);
 
-        // Vérifier que le projet appartient bien à l'entreprise si un projet est sélectionné
-        if (isset($validated['project_id']) && $validated['project_id']) {
-            $project = \App\Models\Project::find($validated['project_id']);
-            if (!$project || $project->company_id != $company->id) {
+        // Vérifier que tous les projets appartiennent bien à l'entreprise
+        if (isset($validated['project_ids']) && !empty($validated['project_ids'])) {
+            $projectIds = $validated['project_ids'];
+            $invalidProjects = \App\Models\Project::whereIn('id', $projectIds)
+                ->where('company_id', '!=', $company->id)
+                ->pluck('id')
+                ->toArray();
+            
+            if (!empty($invalidProjects)) {
                 return redirect()->back()
-                    ->withErrors(['project_id' => 'Le projet sélectionné n\'appartient pas à cette entreprise.'])
+                    ->withErrors(['project_ids' => 'Un ou plusieurs projets sélectionnés n\'appartiennent pas à cette entreprise.'])
                     ->withInput();
             }
         }
@@ -503,26 +530,41 @@ class InvitationController extends Controller
             }
         }
 
-        $oldProjectId = $invitation->project_id;
-        $invitation->update($validated);
+        // Récupérer les anciens projets
+        $oldProjectIds = $invitation->projects->pluck('id')->toArray();
+        
+        // Mettre à jour l'invitation (sans project_ids car ce n'est pas une colonne de la table)
+        $invitationData = $validated;
+        unset($invitationData['project_ids']);
+        $invitation->update($invitationData);
+
+        // Mettre à jour les projets associés
+        if (isset($validated['project_ids']) && !empty($validated['project_ids'])) {
+            $invitation->projects()->sync($validated['project_ids']);
+        } else {
+            $invitation->projects()->detach();
+        }
 
         // Si l'invitation a été acceptée, mettre à jour l'association projet de l'utilisateur
         if ($invitation->status === 'accepted') {
             $invitedUser = User::where('email', $invitation->email)->first();
             if ($invitedUser) {
-                // Retirer l'ancien projet si nécessaire
-                if ($oldProjectId) {
-                    $oldProject = \App\Models\Project::find($oldProjectId);
-                    if ($oldProject) {
-                        $oldProject->users()->detach($invitedUser->id);
+                // Retirer l'utilisateur des anciens projets qui ne sont plus dans la liste
+                $projectsToRemove = array_diff($oldProjectIds, $validated['project_ids'] ?? []);
+                foreach ($projectsToRemove as $projectId) {
+                    $project = \App\Models\Project::find($projectId);
+                    if ($project) {
+                        $project->users()->detach($invitedUser->id);
                     }
                 }
                 
-                // Ajouter le nouveau projet si un projet est spécifié
-                if ($validated['project_id']) {
-                    $newProject = \App\Models\Project::find($validated['project_id']);
-                    if ($newProject && !$newProject->users()->where('users.id', $invitedUser->id)->exists()) {
-                        $newProject->users()->attach($invitedUser->id);
+                // Ajouter l'utilisateur aux nouveaux projets
+                if (isset($validated['project_ids']) && !empty($validated['project_ids'])) {
+                    foreach ($validated['project_ids'] as $projectId) {
+                        $project = \App\Models\Project::find($projectId);
+                        if ($project && !$project->users()->where('users.id', $invitedUser->id)->exists()) {
+                            $project->users()->attach($invitedUser->id);
+                        }
                     }
                 }
             }

@@ -104,12 +104,19 @@ class AttendanceController extends Controller
                 ->with('error', 'Un pointage existe déjà pour cet employé à cette date.');
         }
 
+        // Upload de la photo de check-in si fournie
+        $checkInPhoto = null;
+        if ($request->hasFile('check_in_photo')) {
+            $checkInPhoto = $request->file('check_in_photo')->store('attendances/check-in', 'public');
+        }
+
         $attendance = Attendance::create([
             'project_id' => $project->id,
             'employee_id' => $validated['employee_id'],
             'date' => $validated['date'],
             'check_in' => $validated['check_in'],
             'check_in_location' => $validated['check_in_location'] ?? null,
+            'check_in_photo' => $checkInPhoto,
             'notes' => $validated['notes'] ?? null,
             'is_present' => true,
         ]);

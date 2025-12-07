@@ -126,6 +126,7 @@ class AttendanceController extends Controller
         $validator = Validator::make($request->all(), [
             'check_in_latitude' => 'nullable|numeric',
             'check_in_longitude' => 'nullable|numeric',
+            'check_in_photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ]);
 
         if ($validator->fails()) {
@@ -136,9 +137,19 @@ class AttendanceController extends Controller
             ], 422);
         }
 
-        // Utiliser l'ID de l'utilisateur connecté comme employee_id
-        // TODO: Créer une relation User-Employee si nécessaire
-        $employeeId = $user->id;
+        // Trouver l'employé associé à l'utilisateur par email
+        $employee = Employee::where('company_id', $companyId)
+            ->where('email', $user->email)
+            ->first();
+
+        if (!$employee) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Aucun employé trouvé associé à votre compte. Veuillez contacter l\'administrateur.',
+            ], 404);
+        }
+
+        $employeeId = $employee->id;
         $date = Carbon::today();
 
         // Vérifier si un pointage existe déjà pour aujourd'hui
@@ -164,10 +175,17 @@ class AttendanceController extends Controller
             $attendance->date = $date;
         }
 
+        // Upload de la photo de check-in si fournie
+        $checkInPhoto = null;
+        if ($request->hasFile('check_in_photo')) {
+            $checkInPhoto = $request->file('check_in_photo')->store('attendances/check-in', 'public');
+        }
+
         $attendance->check_in = Carbon::now()->format('H:i');
         $attendance->check_in_location = $request->check_in_latitude && $request->check_in_longitude
             ? $request->check_in_latitude . ',' . $request->check_in_longitude
             : null;
+        $attendance->check_in_photo = $checkInPhoto;
         $attendance->is_present = true;
         $attendance->save();
 
@@ -179,6 +197,9 @@ class AttendanceController extends Controller
             'check_in_time' => Carbon::parse($attendance->date->format('Y-m-d') . ' ' . $attendance->check_in)->toIso8601String(),
             'check_in_latitude' => $this->extractLatitude($attendance->check_in_location),
             'check_in_longitude' => $this->extractLongitude($attendance->check_in_location),
+            'check_in_photo' => $attendance->check_in_photo 
+                ? Storage::url($attendance->check_in_photo) 
+                : null,
             'is_absence' => false,
             'created_at' => $attendance->created_at->toIso8601String(),
         ];
@@ -232,10 +253,31 @@ class AttendanceController extends Controller
             ], 400);
         }
 
+        $validator = Validator::make($request->all(), [
+            'check_out_latitude' => 'nullable|numeric',
+            'check_out_longitude' => 'nullable|numeric',
+            'check_out_photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Les données fournies sont invalides.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        // Upload de la photo de check-out si fournie
+        $checkOutPhoto = null;
+        if ($request->hasFile('check_out_photo')) {
+            $checkOutPhoto = $request->file('check_out_photo')->store('attendances/check-out', 'public');
+        }
+
         $attendance->check_out = Carbon::now()->format('H:i');
         $attendance->check_out_location = $request->check_out_latitude && $request->check_out_longitude
             ? $request->check_out_latitude . ',' . $request->check_out_longitude
             : null;
+        $attendance->check_out_photo = $checkOutPhoto;
         $attendance->calculateHoursWorked();
         $attendance->save();
 
@@ -250,6 +292,9 @@ class AttendanceController extends Controller
             'check_out_time' => Carbon::parse($attendance->date->format('Y-m-d') . ' ' . $attendance->check_out)->toIso8601String(),
             'check_out_latitude' => $this->extractLatitude($attendance->check_out_location),
             'check_out_longitude' => $this->extractLongitude($attendance->check_out_location),
+            'check_out_photo' => $attendance->check_out_photo 
+                ? Storage::url($attendance->check_out_photo) 
+                : null,
             'hours_worked' => $attendance->hours_worked ? (float)$attendance->hours_worked : null,
             'overtime_hours' => $attendance->overtime_hours ? (float)$attendance->overtime_hours : null,
             'is_absence' => false,
@@ -299,9 +344,19 @@ class AttendanceController extends Controller
             ], 422);
         }
 
-        // Utiliser l'ID de l'utilisateur connecté comme employee_id
-        // TODO: Créer une relation User-Employee si nécessaire
-        $employeeId = $user->id;
+        // Trouver l'employé associé à l'utilisateur par email
+        $employee = Employee::where('company_id', $companyId)
+            ->where('email', $user->email)
+            ->first();
+
+        if (!$employee) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Aucun employé trouvé associé à votre compte. Veuillez contacter l\'administrateur.',
+            ], 404);
+        }
+
+        $employeeId = $employee->id;
         $date = Carbon::today();
 
         // Vérifier si un pointage existe déjà pour aujourd'hui
