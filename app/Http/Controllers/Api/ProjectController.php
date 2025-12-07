@@ -26,6 +26,7 @@ class ProjectController extends Controller
         }
 
         // Filtrer les projets selon l'accès de l'utilisateur
+        // Cette méthode garantit que l'utilisateur ne voit QUE les projets assignés dans project_user
         $query = Project::accessibleByUser($user, $companyId)->with('creator');
 
         // Filtre par statut
@@ -53,6 +54,16 @@ class ProjectController extends Controller
         $query->orderBy($sortBy, $sortOrder);
 
         $projects = $query->get();
+
+        // Log pour debug (peut être commenté en production)
+        \Log::info('API Projects - Projets retournés pour l\'utilisateur', [
+            'user_id' => $user->id,
+            'user_email' => $user->email,
+            'company_id' => $companyId,
+            'projects_count' => $projects->count(),
+            'project_ids' => $projects->pluck('id')->toArray(),
+            'is_admin' => $user->isSuperAdmin() || $user->hasRoleInCompany('admin', $companyId)
+        ]);
 
         return response()->json([
             'success' => true,

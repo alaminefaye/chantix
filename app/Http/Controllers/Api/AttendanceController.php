@@ -29,12 +29,13 @@ class AttendanceController extends Controller
             ], 400);
         }
 
-        $project = Project::forCompany($companyId)->find($projectId);
+        // Vérifier que le projet existe et que l'utilisateur y a accès
+        $project = Project::accessibleByUser($user, $companyId)->find($projectId);
 
         if (!$project) {
             return response()->json([
                 'success' => false,
-                'message' => 'Projet non trouvé.',
+                'message' => 'Projet non trouvé ou accès refusé.',
             ], 404);
         }
 
@@ -126,22 +127,25 @@ class AttendanceController extends Controller
             ], 400);
         }
 
-        $project = Project::forCompany($companyId)->find($projectId);
+        // Vérifier que le projet existe et que l'utilisateur y a accès
+        $project = Project::accessibleByUser($user, $companyId)->find($projectId);
 
-        \Log::info('Check-in - Vérification projet', [
+        \Log::info('Check-in - Vérification projet et accès', [
             'project_id' => $projectId,
             'company_id' => $companyId,
             'project_found' => $project ? 'yes' : 'no',
+            'user_id' => $user->id,
         ]);
 
         if (!$project) {
-            \Log::warning('Check-in - Projet non trouvé', [
+            \Log::warning('Check-in - Projet non trouvé ou accès refusé', [
                 'project_id' => $projectId,
                 'company_id' => $companyId,
+                'user_id' => $user->id,
             ]);
             return response()->json([
                 'success' => false,
-                'message' => 'Projet non trouvé.',
+                'message' => 'Projet non trouvé ou accès refusé.',
             ], 404);
         }
 
@@ -287,12 +291,13 @@ class AttendanceController extends Controller
             ], 400);
         }
 
-        $project = Project::forCompany($companyId)->find($projectId);
+        // Vérifier que le projet existe et que l'utilisateur y a accès
+        $project = Project::accessibleByUser($user, $companyId)->find($projectId);
 
         if (!$project) {
             return response()->json([
                 'success' => false,
-                'message' => 'Projet non trouvé.',
+                'message' => 'Projet non trouvé ou accès refusé.',
             ], 404);
         }
 
@@ -384,12 +389,13 @@ class AttendanceController extends Controller
             ], 400);
         }
 
-        $project = Project::forCompany($companyId)->find($projectId);
+        // Vérifier que le projet existe et que l'utilisateur y a accès
+        $project = Project::accessibleByUser($user, $companyId)->find($projectId);
 
         if (!$project) {
             return response()->json([
                 'success' => false,
-                'message' => 'Projet non trouvé.',
+                'message' => 'Projet non trouvé ou accès refusé.',
             ], 404);
         }
 

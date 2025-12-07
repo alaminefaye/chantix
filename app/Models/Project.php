@@ -95,12 +95,10 @@ class Project extends Model
         }
 
         // Utilisateur normal : voir SEULEMENT les projets auxquels il est explicitement associé
+        // SÉCURITÉ: Ne pas inclure les projets créés par l'utilisateur sauf s'ils sont aussi dans project_user
+        // Un utilisateur ne doit voir QUE les projets qui lui sont explicitement assignés
         return $query->where('company_id', $companyId)
-            ->where(function($q) use ($user, $assignedProjectIds) {
-                $q->whereIn('id', $assignedProjectIds)
-                // Aussi les projets créés par l'utilisateur (si nécessaire)
-                ->orWhere('created_by', $user->id);
-            });
+            ->whereIn('id', $assignedProjectIds); // SEULEMENT les projets dans project_user
     }
 
     /**
