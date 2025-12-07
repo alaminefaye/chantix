@@ -72,15 +72,26 @@
                   </td>
                   <td class="border-bottom-0">
                     @php
-                      $invitationProjects = [];
+                      $invitationProjects = collect([]);
                       try {
+                        // Essayer d'abord avec la relation chargée
                         if ($invitation->relationLoaded('projects')) {
                           $invitationProjects = $invitation->projects;
-                        } elseif (method_exists($invitation, 'projects')) {
+                        } 
+                        // Sinon, essayer de charger la relation si la table existe
+                        elseif (\Illuminate\Support\Facades\Schema::hasTable('invitation_project')) {
+                          $invitation->load('projects');
                           $invitationProjects = $invitation->projects;
                         }
+                        // Si la relation n'est pas disponible, utiliser project_id comme fallback
+                        elseif ($invitation->project_id) {
+                          $project = \App\Models\Project::find($invitation->project_id);
+                          if ($project) {
+                            $invitationProjects = collect([$project]);
+                          }
+                        }
                       } catch (\Exception $e) {
-                        // Si la table n'existe pas, utiliser l'ancienne colonne project_id
+                        // Si tout échoue, utiliser l'ancienne colonne project_id
                         if ($invitation->project_id) {
                           $project = \App\Models\Project::find($invitation->project_id);
                           if ($project) {
@@ -89,7 +100,7 @@
                         }
                       }
                     @endphp
-                    @if(count($invitationProjects) > 0)
+                    @if($invitationProjects && $invitationProjects->count() > 0)
                       <div class="d-flex flex-wrap gap-1">
                         @foreach($invitationProjects as $project)
                           <span class="badge bg-primary rounded-3 fw-semibold" title="{{ $project->name }}">

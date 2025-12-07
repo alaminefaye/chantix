@@ -48,8 +48,14 @@ class InvitationController extends Controller
         }
 
         $withRelations = ['inviter', 'role', 'project'];
+        
+        // Charger la relation projects seulement si la table existe
         if (Schema::hasTable('invitation_project')) {
-            $withRelations[] = 'projects';
+            try {
+                $withRelations[] = 'projects';
+            } catch (\Exception $e) {
+                \Log::warning('Erreur lors du chargement de la relation projects: ' . $e->getMessage());
+            }
         }
         
         $invitations = $company->invitations()
@@ -490,6 +496,10 @@ class InvitationController extends Controller
         $selectedProjectIds = [];
         try {
             if (Schema::hasTable('invitation_project')) {
+                // Charger la relation si elle n'est pas déjà chargée
+                if (!$invitation->relationLoaded('projects')) {
+                    $invitation->load('projects');
+                }
                 $selectedProjectIds = $invitation->projects->pluck('id')->toArray();
             } else {
                 // Fallback: utiliser l'ancienne colonne project_id si elle existe
@@ -498,6 +508,7 @@ class InvitationController extends Controller
                 }
             }
         } catch (\Exception $e) {
+            \Log::warning('Erreur lors de la récupération des projets de l\'invitation: ' . $e->getMessage());
             // Si la table n'existe pas, utiliser l'ancienne colonne project_id comme fallback
             if ($invitation->project_id) {
                 $selectedProjectIds = [$invitation->project_id];
@@ -588,6 +599,10 @@ class InvitationController extends Controller
         $oldProjectIds = [];
         try {
             if (Schema::hasTable('invitation_project')) {
+                // Charger la relation si elle n'est pas déjà chargée
+                if (!$invitation->relationLoaded('projects')) {
+                    $invitation->load('projects');
+                }
                 $oldProjectIds = $invitation->projects->pluck('id')->toArray();
             } else {
                 // Fallback: utiliser l'ancienne colonne project_id si elle existe
@@ -596,6 +611,7 @@ class InvitationController extends Controller
                 }
             }
         } catch (\Exception $e) {
+            \Log::warning('Erreur lors de la récupération des anciens projets: ' . $e->getMessage());
             // Si la table n'existe pas, utiliser l'ancienne colonne project_id comme fallback
             if ($invitation->project_id) {
                 $oldProjectIds = [$invitation->project_id];
