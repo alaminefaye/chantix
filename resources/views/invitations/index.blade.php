@@ -72,39 +72,8 @@
                   </td>
                   <td class="border-bottom-0">
                     @php
-                      $invitationProjects = collect([]);
-                      // TOUJOURS utiliser une requête directe sur la table pivot pour éviter les problèmes de cache
-                      if (\Illuminate\Support\Facades\Schema::hasTable('invitation_project')) {
-                        try {
-                          // Requête directe sur la table pivot (ne dépend pas du cache Eloquent)
-                          $directProjectIds = \Illuminate\Support\Facades\DB::table('invitation_project')
-                            ->where('invitation_id', $invitation->id)
-                            ->pluck('project_id')
-                            ->toArray();
-                          
-                          // Récupérer les projets directement depuis la DB
-                          if (!empty($directProjectIds)) {
-                            $invitationProjects = \App\Models\Project::whereIn('id', $directProjectIds)->get();
-                          }
-                        } catch (\Exception $e) {
-                          \Log::error('Erreur lors du chargement des projets de l\'invitation ' . $invitation->id . ': ' . $e->getMessage());
-                          // Fallback: essayer avec la relation Eloquent
-                          try {
-                            $invitation->load('projects');
-                            $invitationProjects = $invitation->projects;
-                          } catch (\Exception $e2) {
-                            \Log::error('Erreur avec la relation Eloquent: ' . $e2->getMessage());
-                          }
-                        }
-                      }
-                      
-                      // Fallback: utiliser project_id seulement si la relation many-to-many est vide
-                      if ($invitationProjects->isEmpty() && isset($invitation->project_id) && $invitation->project_id) {
-                        $project = \App\Models\Project::find($invitation->project_id);
-                        if ($project) {
-                          $invitationProjects = collect([$project]);
-                        }
-                      }
+                      // Utiliser la méthode helper qui récupère directement depuis la DB
+                      $invitationProjects = $invitation->getProjectsDirectly();
                     @endphp
                     @if($invitationProjects && $invitationProjects->count() > 0)
                       <div class="d-flex flex-wrap gap-1">

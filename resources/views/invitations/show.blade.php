@@ -55,33 +55,8 @@
               <label class="form-label fw-semibold">Projets</label>
               <p class="mb-0">
                 @php
-                  $invitationProjects = collect([]);
-                  try {
-                    // Essayer d'abord avec la relation chargée
-                    if ($invitation->relationLoaded('projects')) {
-                      $invitationProjects = $invitation->projects;
-                    } 
-                    // Sinon, essayer de charger la relation si la table existe
-                    elseif (\Illuminate\Support\Facades\Schema::hasTable('invitation_project')) {
-                      $invitation->load('projects');
-                      $invitationProjects = $invitation->projects;
-                    }
-                    // Si la relation n'est pas disponible, utiliser project_id comme fallback
-                    elseif ($invitation->project_id) {
-                      $project = \App\Models\Project::find($invitation->project_id);
-                      if ($project) {
-                        $invitationProjects = collect([$project]);
-                      }
-                    }
-                  } catch (\Exception $e) {
-                    // Si tout échoue, utiliser l'ancienne colonne project_id
-                    if ($invitation->project_id) {
-                      $project = \App\Models\Project::find($invitation->project_id);
-                      if ($project) {
-                        $invitationProjects = collect([$project]);
-                      }
-                    }
-                  }
+                  // Utiliser la méthode helper qui récupère directement depuis la DB
+                  $invitationProjects = $invitation->getProjectsDirectly();
                 @endphp
                 @if($invitationProjects && $invitationProjects->count() > 0)
                   <div class="d-flex flex-wrap gap-1">

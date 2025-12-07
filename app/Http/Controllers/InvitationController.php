@@ -64,35 +64,11 @@ class InvitationController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(20);
         
-        // S'assurer que la relation projects est bien chargée pour toutes les invitations
-        // Utiliser une requête directe pour éviter les problèmes de cache sur le serveur
-        if (Schema::hasTable('invitation_project')) {
-            foreach ($invitations as $invitation) {
-                try {
-                    // Requête directe sur la table pivot (ne dépend pas du cache)
-                    $directProjectIds = \DB::table('invitation_project')
-                        ->where('invitation_id', $invitation->id)
-                        ->pluck('project_id')
-                        ->toArray();
-                    
-                    // Charger les projets directement depuis la DB et définir la relation
-                    if (!empty($directProjectIds)) {
-                        $projects = \App\Models\Project::whereIn('id', $directProjectIds)->get();
-                        $invitation->setRelation('projects', $projects);
-                    } else {
-                        // Si aucun projet dans la table pivot, charger la relation vide
-                        $invitation->setRelation('projects', collect([]));
-                    }
-                } catch (\Exception $e) {
-                    \Log::warning('Erreur lors du chargement des projets pour l\'invitation ' . $invitation->id . ': ' . $e->getMessage());
-                    // Fallback: essayer avec la relation Eloquent
-                    try {
-                        $invitation->load('projects');
-                    } catch (\Exception $e2) {
-                        $invitation->setRelation('projects', collect([]));
-                    }
-                }
-            }
+        // Précharger les projets pour toutes les invitations en utilisant la méthode directe
+        // Cela évite les problèmes de cache sur le serveur
+        foreach ($invitations as $invitation) {
+            $projects = $invitation->getProjectsDirectly();
+            $invitation->setRelation('projects', $projects);
         }
 
         return view('invitations.index', compact('company', 'invitations'));
@@ -391,17 +367,14 @@ class InvitationController extends Controller
         ]);
 
         // Associer l'utilisateur aux projets si des projets sont spécifiés dans l'invitation
-        if (Schema::hasTable('invitation_project')) {
-            try {
-                if ($invitation->projects()->count() > 0) {
-                    foreach ($invitation->projects as $project) {
-                        if (!$project->users()->where('users.id', $user->id)->exists()) {
-                            $project->users()->attach($user->id);
-                        }
-                    }
+        // Utiliser la méthode directe pour éviter les problèmes de cache
+        $invitationProjects = $invitation->getProjectsDirectly();
+        
+        if ($invitationProjects->count() > 0) {
+            foreach ($invitationProjects as $project) {
+                if (!$project->users()->where('users.id', $user->id)->exists()) {
+                    $project->users()->attach($user->id);
                 }
-            } catch (\Exception $e) {
-                \Log::warning('Erreur lors de l\'association des projets à l\'utilisateur: ' . $e->getMessage());
             }
         } else {
             // Fallback: utiliser l'ancienne colonne project_id si elle existe
@@ -465,14 +438,9 @@ class InvitationController extends Controller
         }
 
         $invitation->load('inviter', 'role', 'company');
-        // Charger les projets seulement si la table existe
-        if (Schema::hasTable('invitation_project')) {
-            try {
-                $invitation->load('projects');
-            } catch (\Exception $e) {
-                \Log::warning('Erreur lors du chargement des projets: ' . $e->getMessage());
-            }
-        }
+        // Charger les projets en utilisant la méthode directe (évite les problèmes de cache)
+        $projects = $invitation->getProjectsDirectly();
+        $invitation->setRelation('projects', $projects);
 
         return view('invitations.show', compact('company', 'invitation'));
     }
@@ -524,38 +492,15 @@ class InvitationController extends Controller
         $roles = Role::all();
         $projects = $company->projects()->orderBy('name')->get();
 
-        // Récupérer les IDs des projets associés de manière sécurisée
-        // Utiliser une requête directe pour éviter les problèmes de cache
-        $selectedProjectIds = [];
-        try {
-            if (Schema::hasTable('invitation_project')) {
-                // Requête directe sur la table pivot (ne dépend pas du cache)
-                $selectedProjectIds = DB::table('invitation_project')
-                    ->where('invitation_id', $invitation->id)
-                    ->pluck('project_id')
-                    ->toArray();
-                
-                \Log::info('Projets chargés pour l\'invitation (edit)', [
-                    'invitation_id' => $invitation->id,
-                    'project_ids' => $selectedProjectIds,
-                    'count' => count($selectedProjectIds)
-                ]);
-            } else {
-                // Fallback: utiliser l'ancienne colonne project_id si elle existe
-                if ($invitation->project_id) {
-                    $selectedProjectIds = [$invitation->project_id];
-                }
-            }
-        } catch (\Exception $e) {
-            \Log::warning('Erreur lors de la récupération des projets de l\'invitation: ' . $e->getMessage(), [
-                'invitation_id' => $invitation->id,
-                'trace' => $e->getTraceAsString()
-            ]);
-            // Si la table n'existe pas, utiliser l'ancienne colonne project_id comme fallback
-            if ($invitation->project_id) {
-                $selectedProjectIds = [$invitation->project_id];
-            }
-        }
+        // Récupérer les IDs des projets associés en utilisant la méthode directe
+        $invitationProjects = $invitation->getProjectsDirectly();
+        $selectedProjectIds = $invitationProjects->pluck('id')->toArray();
+        
+        \Log::info('Projets chargés pour l\'invitation (edit)', [
+            'invitation_id' => $invitation->id,
+            'project_ids' => $selectedProjectIds,
+            'count' => count($selectedProjectIds)
+        ]);
 
         return view('invitations.edit', compact('company', 'invitation', 'roles', 'projects', 'selectedProjectIds'));
     }
@@ -637,38 +582,15 @@ class InvitationController extends Controller
             }
         }
 
-        // Récupérer les anciens projets de manière sécurisée AVANT la mise à jour
-        // Utiliser une requête directe pour éviter les problèmes de cache
-        $oldProjectIds = [];
-        try {
-            if (Schema::hasTable('invitation_project')) {
-                // Requête directe sur la table pivot (ne dépend pas du cache)
-                $oldProjectIds = DB::table('invitation_project')
-                    ->where('invitation_id', $invitation->id)
-                    ->pluck('project_id')
-                    ->toArray();
-                
-                \Log::info('Anciens projets récupérés pour l\'invitation (update)', [
-                    'invitation_id' => $invitation->id,
-                    'old_project_ids' => $oldProjectIds,
-                    'count' => count($oldProjectIds)
-                ]);
-            } else {
-                // Fallback: utiliser l'ancienne colonne project_id si elle existe
-                if ($invitation->project_id) {
-                    $oldProjectIds = [$invitation->project_id];
-                }
-            }
-        } catch (\Exception $e) {
-            \Log::warning('Erreur lors de la récupération des anciens projets: ' . $e->getMessage(), [
-                'invitation_id' => $invitation->id,
-                'trace' => $e->getTraceAsString()
-            ]);
-            // Si la table n'existe pas, utiliser l'ancienne colonne project_id comme fallback
-            if ($invitation->project_id) {
-                $oldProjectIds = [$invitation->project_id];
-            }
-        }
+        // Récupérer les anciens projets AVANT la mise à jour en utilisant la méthode directe
+        $oldProjects = $invitation->getProjectsDirectly();
+        $oldProjectIds = $oldProjects->pluck('id')->toArray();
+        
+        \Log::info('Anciens projets récupérés pour l\'invitation (update)', [
+            'invitation_id' => $invitation->id,
+            'old_project_ids' => $oldProjectIds,
+            'count' => count($oldProjectIds)
+        ]);
         
         // Mettre à jour l'invitation (sans project_ids car ce n'est pas une colonne de la table)
         $invitationData = $validated;
@@ -701,31 +623,27 @@ class InvitationController extends Controller
                 // Synchroniser tous les projets sélectionnés
                 $invitation->projects()->sync($projectIds);
                 
-                // Vider le cache de la relation pour forcer le rechargement
+                // Vider le cache de la relation et recharger depuis la DB
                 $invitation->unsetRelation('projects');
                 
-                // Vérifier directement dans la DB pour éviter les problèmes de cache
+                // Vérifier directement dans la DB pour confirmer la synchronisation
                 $syncedProjectIds = DB::table('invitation_project')
                     ->where('invitation_id', $invitation->id)
                     ->pluck('project_id')
                     ->toArray();
                 
-                // Recharger la relation avec les données de la DB
-                if (!empty($syncedProjectIds)) {
-                    $projects = \App\Models\Project::whereIn('id', $syncedProjectIds)->get();
-                    $invitation->setRelation('projects', $projects);
-                } else {
-                    $invitation->setRelation('projects', collect([]));
-                }
+                // Recharger avec la méthode directe
+                $syncedProjects = $invitation->getProjectsDirectly();
+                $invitation->setRelation('projects', $syncedProjects);
                 
                 \Log::info('Projets synchronisés pour l\'invitation', [
                     'invitation_id' => $invitation->id,
                     'project_ids_synced' => $projectIds,
                     'project_ids_in_db' => $syncedProjectIds,
-                    'projects_names' => $invitation->projects->pluck('name')->toArray(),
+                    'projects_names' => $syncedProjects->pluck('name')->toArray(),
                     'count_synced' => count($projectIds),
                     'count_in_db' => count($syncedProjectIds),
-                    'count_loaded' => $invitation->projects->count()
+                    'count_loaded' => $syncedProjects->count()
                 ]);
             } catch (\Exception $e) {
                 \Log::error('Erreur lors de la synchronisation des projets: ' . $e->getMessage(), [

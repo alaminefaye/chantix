@@ -68,6 +68,40 @@ class Invitation extends Model
     }
 
     /**
+     * Récupérer les projets directement depuis la DB (sans cache)
+     * Utiliser cette méthode au lieu de $invitation->projects pour éviter les problèmes de cache
+     */
+    public function getProjectsDirectly()
+    {
+        if (!\Illuminate\Support\Facades\Schema::hasTable('invitation_project')) {
+            // Fallback: utiliser l'ancienne colonne project_id
+            if ($this->project_id) {
+                $project = Project::find($this->project_id);
+                return $project ? collect([$project]) : collect([]);
+            }
+            return collect([]);
+        }
+
+        try {
+            // Requête directe sur la table pivot (ne dépend pas du cache)
+            $projectIds = \Illuminate\Support\Facades\DB::table('invitation_project')
+                ->where('invitation_id', $this->id)
+                ->pluck('project_id')
+                ->toArray();
+
+            if (empty($projectIds)) {
+                return collect([]);
+            }
+
+            // Récupérer les projets directement
+            return Project::whereIn('id', $projectIds)->get();
+        } catch (\Exception $e) {
+            \Log::error('Erreur lors de la récupération directe des projets pour l\'invitation ' . $this->id . ': ' . $e->getMessage());
+            return collect([]);
+        }
+    }
+
+    /**
      * Générer un token unique
      */
     public static function generateToken()
