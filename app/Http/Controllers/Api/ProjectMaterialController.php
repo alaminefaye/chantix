@@ -7,6 +7,7 @@ use App\Models\Project;
 use App\Models\Material;
 use App\Models\ProjectMaterial;
 use App\Services\StockService;
+use App\Services\PushNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -121,6 +122,25 @@ class ProjectMaterialController extends Controller
         ]);
 
         $projectMaterial = $project->materials()->where('materials.id', $material->id)->first();
+
+        // Envoyer des notifications push aux utilisateurs du projet
+        try {
+            $pushService = new PushNotificationService();
+            $pushService->notifyProjectStakeholders(
+                $project,
+                'material_added',
+                'Nouveau matériau ajouté',
+                $user->name . ' a ajouté le matériau "' . $material->name . '" au projet "' . $project->name . '"',
+                [
+                    'material_id' => $material->id,
+                    'material_name' => $material->name,
+                    'quantity_planned' => $validator->validated()['quantity_planned'],
+                ],
+                $user->id
+            );
+        } catch (\Exception $e) {
+            \Log::warning("Failed to send material added push notification: " . $e->getMessage());
+        }
 
         // Formater les données
         $formattedData = [
@@ -288,6 +308,24 @@ class ProjectMaterialController extends Controller
         }
 
         $project->materials()->detach($materialId);
+
+        // Envoyer des notifications push aux utilisateurs du projet
+        try {
+            $pushService = new PushNotificationService();
+            $pushService->notifyProjectStakeholders(
+                $project,
+                'material_removed',
+                'Matériau retiré',
+                $user->name . ' a retiré le matériau "' . $material->name . '" du projet "' . $project->name . '"',
+                [
+                    'material_id' => $material->id,
+                    'material_name' => $material->name,
+                ],
+                $user->id
+            );
+        } catch (\Exception $e) {
+            \Log::warning("Failed to send material removed push notification: " . $e->getMessage());
+        }
 
         return response()->json([
             'success' => true,

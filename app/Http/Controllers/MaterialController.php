@@ -292,6 +292,25 @@ class MaterialController extends Controller
             'notes' => $validated['notes'] ?? null,
         ]);
 
+        // Envoyer des notifications push aux utilisateurs du projet
+        try {
+            $pushService = new \App\Services\PushNotificationService();
+            $pushService->notifyProjectStakeholders(
+                $project,
+                'material_added',
+                'Nouveau matériau ajouté',
+                $user->name . ' a ajouté le matériau "' . $material->name . '" au projet "' . $project->name . '"',
+                [
+                    'material_id' => $material->id,
+                    'material_name' => $material->name,
+                    'quantity_planned' => $validated['quantity_planned'],
+                ],
+                $user->id
+            );
+        } catch (\Exception $e) {
+            \Log::warning("Failed to send material added push notification: " . $e->getMessage());
+        }
+
         return redirect()->back()
             ->with('success', 'Matériau ajouté au projet avec succès.');
     }
@@ -356,6 +375,24 @@ class MaterialController extends Controller
 
             // Détacher le matériau du projet
             $project->materials()->detach($material->id);
+
+            // Envoyer des notifications push aux utilisateurs du projet
+            try {
+                $pushService = new \App\Services\PushNotificationService();
+                $pushService->notifyProjectStakeholders(
+                    $project,
+                    'material_removed',
+                    'Matériau retiré',
+                    $user->name . ' a retiré le matériau "' . $material->name . '" du projet "' . $project->name . '"',
+                    [
+                        'material_id' => $material->id,
+                        'material_name' => $material->name,
+                    ],
+                    $user->id
+                );
+            } catch (\Exception $e) {
+                \Log::warning("Failed to send material removed push notification: " . $e->getMessage());
+            }
 
             DB::commit();
 
