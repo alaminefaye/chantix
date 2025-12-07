@@ -172,15 +172,32 @@ class AttendanceController extends Controller
             'employee_id' => $employee?->id,
         ]);
 
+        // Si l'employé n'existe pas, le créer automatiquement
         if (!$employee) {
-            \Log::warning('Check-in - Aucun employé trouvé', [
+            \Log::info('Check-in - Création automatique de l\'employé', [
                 'user_email' => $user->email,
                 'company_id' => $companyId,
+                'user_name' => $user->name,
             ]);
-            return response()->json([
-                'success' => false,
-                'message' => 'Aucun employé trouvé associé à votre compte. Veuillez contacter l\'administrateur.',
-            ], 404);
+
+            // Extraire le prénom et nom depuis le nom complet de l'utilisateur
+            $nameParts = explode(' ', $user->name, 2);
+            $firstName = $nameParts[0] ?? $user->name;
+            $lastName = $nameParts[1] ?? '';
+
+            $employee = Employee::create([
+                'company_id' => $companyId,
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                'email' => $user->email,
+                'is_active' => true,
+                'hire_date' => now(),
+            ]);
+
+            \Log::info('Check-in - Employé créé', [
+                'employee_id' => $employee->id,
+                'email' => $employee->email,
+            ]);
         }
 
         $employeeId = $employee->id;
