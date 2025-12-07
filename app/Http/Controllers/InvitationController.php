@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 use App\Mail\InvitationMail;
 
 class InvitationController extends Controller
@@ -70,10 +71,23 @@ class InvitationController extends Controller
                     // Toujours recharger pour être sûr d'avoir les dernières données
                     $invitation->load('projects');
                     
+                    // Vérification supplémentaire: requête directe sur la table pivot
+                    $directProjectIds = \DB::table('invitation_project')
+                        ->where('invitation_id', $invitation->id)
+                        ->pluck('project_id')
+                        ->toArray();
+                    
+                    // Si la relation ne retourne pas tous les projets, recharger depuis la DB
+                    if (count($directProjectIds) > $invitation->projects->count()) {
+                        $invitation->setRelation('projects', \App\Models\Project::whereIn('id', $directProjectIds)->get());
+                    }
+                    
                     // Debug: vérifier combien de projets sont chargés
                     \Log::debug('Invitation ' . $invitation->id . ' - Projets chargés', [
-                        'count' => $invitation->projects->count(),
-                        'project_ids' => $invitation->projects->pluck('id')->toArray(),
+                        'count_relation' => $invitation->projects->count(),
+                        'count_direct' => count($directProjectIds),
+                        'project_ids_relation' => $invitation->projects->pluck('id')->toArray(),
+                        'project_ids_direct' => $directProjectIds,
                         'project_names' => $invitation->projects->pluck('name')->toArray()
                     ]);
                 } catch (\Exception $e) {

@@ -76,19 +76,36 @@
                       // Prioriser toujours la relation many-to-many projects
                       if (\Illuminate\Support\Facades\Schema::hasTable('invitation_project')) {
                         try {
-                          // Toujours recharger la relation pour être sûr d'avoir les dernières données
+                          // Méthode 1: Utiliser la relation Eloquent
                           $invitation->load('projects');
-                          // Récupérer TOUS les projets de la relation many-to-many
                           $invitationProjects = $invitation->projects;
+                          
+                          // Si la relation ne retourne rien ou moins de projets que dans la DB, essayer une requête directe sur la table pivot
+                          $directProjectIds = \Illuminate\Support\Facades\DB::table('invitation_project')
+                            ->where('invitation_id', $invitation->id)
+                            ->pluck('project_id')
+                            ->toArray();
+                          
+                          // Si on trouve plus de projets dans la DB que dans la relation, utiliser la DB
+                          if (count($directProjectIds) > $invitationProjects->count()) {
+                            $invitationProjects = \App\Models\Project::whereIn('id', $directProjectIds)->get();
+                            \Log::debug('Projets récupérés directement depuis la DB pour invitation ' . $invitation->id, [
+                              'count' => $invitationProjects->count(),
+                              'project_ids' => $directProjectIds
+                            ]);
+                          }
                           
                           // Debug: logger pour vérifier
                           \Log::debug('Projets chargés pour invitation ' . $invitation->id, [
                             'count' => $invitationProjects->count(),
                             'project_ids' => $invitationProjects->pluck('id')->toArray(),
-                            'project_names' => $invitationProjects->pluck('name')->toArray()
+                            'project_names' => $invitationProjects->pluck('name')->toArray(),
+                            'relation_loaded' => $invitation->relationLoaded('projects')
                           ]);
                         } catch (\Exception $e) {
-                          \Log::error('Erreur lors du chargement des projets de l\'invitation ' . $invitation->id . ': ' . $e->getMessage());
+                          \Log::error('Erreur lors du chargement des projets de l\'invitation ' . $invitation->id . ': ' . $e->getMessage(), [
+                            'trace' => $e->getTraceAsString()
+                          ]);
                         }
                       }
                       
