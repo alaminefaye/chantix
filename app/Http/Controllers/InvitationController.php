@@ -66,12 +66,18 @@ class InvitationController extends Controller
         // S'assurer que la relation projects est bien chargée pour toutes les invitations
         if (Schema::hasTable('invitation_project')) {
             foreach ($invitations as $invitation) {
-                if (!$invitation->relationLoaded('projects')) {
-                    try {
-                        $invitation->load('projects');
-                    } catch (\Exception $e) {
-                        \Log::warning('Erreur lors du chargement des projets pour l\'invitation ' . $invitation->id . ': ' . $e->getMessage());
-                    }
+                try {
+                    // Toujours recharger pour être sûr d'avoir les dernières données
+                    $invitation->load('projects');
+                    
+                    // Debug: vérifier combien de projets sont chargés
+                    \Log::debug('Invitation ' . $invitation->id . ' - Projets chargés', [
+                        'count' => $invitation->projects->count(),
+                        'project_ids' => $invitation->projects->pluck('id')->toArray(),
+                        'project_names' => $invitation->projects->pluck('name')->toArray()
+                    ]);
+                } catch (\Exception $e) {
+                    \Log::warning('Erreur lors du chargement des projets pour l\'invitation ' . $invitation->id . ': ' . $e->getMessage());
                 }
             }
         }
@@ -660,21 +666,43 @@ class InvitationController extends Controller
         if (Schema::hasTable('invitation_project')) {
             try {
                 // S'assurer que project_ids est un tableau
-                $projectIds = isset($validated['project_ids']) && is_array($validated['project_ids']) 
-                    ? array_filter($validated['project_ids']) // Filtrer les valeurs vides
-                    : [];
+                // Le formulaire envoie project_ids[] donc c'est déjà un tableau
+                $projectIds = [];
+                if (isset($validated['project_ids'])) {
+                    if (is_array($validated['project_ids'])) {
+                        $projectIds = array_filter(array_map('intval', $validated['project_ids'])); // Convertir en entiers et filtrer les valeurs vides
+                    } elseif (is_numeric($validated['project_ids'])) {
+                        // Cas où un seul projet est envoyé comme valeur unique
+                        $projectIds = [(int)$validated['project_ids']];
+                    }
+                }
+                
+                \Log::info('Avant synchronisation des projets', [
+                    'invitation_id' => $invitation->id,
+                    'project_ids_received' => $validated['project_ids'] ?? null,
+                    'project_ids_processed' => $projectIds,
+                    'count' => count($projectIds),
+                    'type' => gettype($validated['project_ids'] ?? null)
+                ]);
                 
                 // Synchroniser tous les projets sélectionnés
                 $invitation->projects()->sync($projectIds);
                 
+                // Recharger la relation pour vérifier
+                $invitation->load('projects');
+                
                 \Log::info('Projets synchronisés pour l\'invitation', [
                     'invitation_id' => $invitation->id,
-                    'project_ids' => $projectIds,
-                    'count' => count($projectIds)
+                    'project_ids_synced' => $projectIds,
+                    'projects_after_sync' => $invitation->projects->pluck('id')->toArray(),
+                    'projects_names' => $invitation->projects->pluck('name')->toArray(),
+                    'count_synced' => count($projectIds),
+                    'count_loaded' => $invitation->projects->count()
                 ]);
             } catch (\Exception $e) {
                 \Log::error('Erreur lors de la synchronisation des projets: ' . $e->getMessage(), [
                     'invitation_id' => $invitation->id,
+                    'project_ids' => $validated['project_ids'] ?? null,
                     'trace' => $e->getTraceAsString()
                 ]);
             }

@@ -116,5 +116,28 @@
     </div>
   </div>
 </div>
+
+@push('scripts')
+<script>
+  // Vérifier que tous les projets sélectionnés sont bien envoyés
+  document.querySelector('form').addEventListener('submit', function(e) {
+    const selectElement = document.getElementById('project_ids');
+    const selectedOptions = Array.from(selectElement.selectedOptions);
+    const selectedValues = selectedOptions.map(option => option.value);
+    
+    console.log('Projets sélectionnés avant envoi:', selectedValues);
+    console.log('Nombre de projets sélectionnés:', selectedValues.length);
+    
+    // Vérifier que tous les projets sélectionnés sont bien dans le formulaire
+    selectedValues.forEach(function(projectId) {
+      const hiddenInput = document.createElement('input');
+      hiddenInput.type = 'hidden';
+      hiddenInput.name = 'project_ids[]';
+      hiddenInput.value = projectId;
+      this.appendChild(hiddenInput);
+    }, this);
+  });
+</script>
+@endpush
 @endsection
 

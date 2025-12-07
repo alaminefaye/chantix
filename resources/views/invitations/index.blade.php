@@ -76,14 +76,19 @@
                       // Prioriser toujours la relation many-to-many projects
                       if (\Illuminate\Support\Facades\Schema::hasTable('invitation_project')) {
                         try {
-                          // Charger la relation si elle n'est pas déjà chargée
-                          if (!$invitation->relationLoaded('projects')) {
-                            $invitation->load('projects');
-                          }
-                          // Récupérer tous les projets de la relation many-to-many
+                          // Toujours recharger la relation pour être sûr d'avoir les dernières données
+                          $invitation->load('projects');
+                          // Récupérer TOUS les projets de la relation many-to-many
                           $invitationProjects = $invitation->projects;
+                          
+                          // Debug: logger pour vérifier
+                          \Log::debug('Projets chargés pour invitation ' . $invitation->id, [
+                            'count' => $invitationProjects->count(),
+                            'project_ids' => $invitationProjects->pluck('id')->toArray(),
+                            'project_names' => $invitationProjects->pluck('name')->toArray()
+                          ]);
                         } catch (\Exception $e) {
-                          \Log::warning('Erreur lors du chargement des projets de l\'invitation: ' . $e->getMessage());
+                          \Log::error('Erreur lors du chargement des projets de l\'invitation ' . $invitation->id . ': ' . $e->getMessage());
                         }
                       }
                       
