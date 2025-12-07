@@ -57,6 +57,7 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
         Route::post('/progress', [\App\Http\Controllers\Api\ProgressController::class, 'store']);
         Route::match(['put', 'post'], '/progress/{progress}', [\App\Http\Controllers\Api\ProgressController::class, 'update']);
         Route::delete('/progress/{progress}', [\App\Http\Controllers\Api\ProgressController::class, 'destroy']);
+        Route::get('/progress/{progress}/audio', [\App\Http\Controllers\Api\ProgressController::class, 'downloadAudio']);
         
         // Matériaux du projet
         Route::get('/materials', [\App\Http\Controllers\Api\ProjectMaterialController::class, 'index']);

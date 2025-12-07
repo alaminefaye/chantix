@@ -87,3 +87,4 @@ Assurez-vous que :
 1. Testez l'API directement avec curl pour voir si les rapports sont retournés
 2. Vérifiez les logs dans l'application mobile pour voir ce qui est reçu
 3. Vérifiez que le project_id utilisé dans l'app correspond bien au project_id des rapports
+

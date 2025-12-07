@@ -75,3 +75,4 @@ Cette migration crée la table pivot nécessaire pour la relation many-to-many e
 - Cette table est utilisée par la relation `projects()` dans le modèle `Invitation`
 - Les données existantes dans la table `invitations` ne seront pas affectées
 - Si des invitations avaient déjà des projets associés via l'ancienne colonne `project_id`, vous devrez peut-être migrer ces données manuellement si nécessaire
+

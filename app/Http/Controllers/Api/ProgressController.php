@@ -570,5 +570,65 @@ class ProgressController extends Controller
             'message' => 'Mise à jour supprimée avec succès.',
         ], 200);
     }
+
+    /**
+     * Télécharger le fichier audio d'une mise à jour
+     */
+    public function downloadAudio(Request $request, $projectId, $progressId)
+    {
+        $user = Auth::user();
+        $companyId = $user->current_company_id;
+
+        if (!$companyId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Veuillez sélectionner une entreprise.',
+            ], 400);
+        }
+
+        $project = Project::forCompany($companyId)->find($projectId);
+
+        if (!$project) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Projet non trouvé.',
+            ], 404);
+        }
+
+        $update = ProgressUpdate::where('project_id', $projectId)
+            ->find($progressId);
+
+        if (!$update) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Mise à jour non trouvée.',
+            ], 404);
+        }
+
+        if (!$update->audio_file) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Aucun fichier audio disponible.',
+            ], 404);
+        }
+
+        // Vérifier que le fichier existe
+        if (!Storage::disk('public')->exists($update->audio_file)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Le fichier audio n\'existe pas.',
+            ], 404);
+        }
+
+        // Retourner le fichier avec les headers appropriés
+        $filePath = Storage::disk('public')->path($update->audio_file);
+        $fileName = basename($update->audio_file);
+        $mimeType = Storage::disk('public')->mimeType($update->audio_file) ?? 'audio/mpeg';
+
+        return response()->download($filePath, $fileName, [
+            'Content-Type' => $mimeType,
+            'Content-Disposition' => 'inline; filename="' . $fileName . '"',
+        ]);
+    }
 }
 
