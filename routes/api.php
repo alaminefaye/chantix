@@ -55,9 +55,10 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     Route::prefix('projects/{project}')->group(function () {
         Route::get('/progress', [\App\Http\Controllers\Api\ProgressController::class, 'index']);
         Route::post('/progress', [\App\Http\Controllers\Api\ProgressController::class, 'store']);
+        // Route spécifique pour l'audio doit être AVANT les routes génériques avec {progress}
+        Route::get('/progress/{progress}/audio', [\App\Http\Controllers\Api\ProgressController::class, 'downloadAudio']);
         Route::match(['put', 'post'], '/progress/{progress}', [\App\Http\Controllers\Api\ProgressController::class, 'update']);
         Route::delete('/progress/{progress}', [\App\Http\Controllers\Api\ProgressController::class, 'destroy']);
-        Route::get('/progress/{progress}/audio', [\App\Http\Controllers\Api\ProgressController::class, 'downloadAudio']);
         
         // Matériaux du projet
         Route::get('/materials', [\App\Http\Controllers\Api\ProjectMaterialController::class, 'index']);

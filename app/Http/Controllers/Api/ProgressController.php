@@ -574,8 +574,18 @@ class ProgressController extends Controller
     /**
      * Télécharger le fichier audio d'une mise à jour
      */
-    public function downloadAudio(Request $request, $projectId, $progressId)
+    public function downloadAudio(Request $request, $project, $progress)
     {
+        // Les paramètres de route sont {project} et {progress}
+        $projectId = $project;
+        $progressId = $progress;
+        
+        \Log::info('downloadAudio appelé', [
+            'project' => $project,
+            'progress' => $progress,
+            'user_id' => Auth::id(),
+        ]);
+        
         $user = Auth::user();
         $companyId = $user->current_company_id;
 
@@ -586,9 +596,10 @@ class ProgressController extends Controller
             ], 400);
         }
 
-        $project = Project::forCompany($companyId)->find($projectId);
+        $projectModel = Project::forCompany($companyId)->find($projectId);
 
-        if (!$project) {
+        if (!$projectModel) {
+            \Log::warning('Projet non trouvé', ['project_id' => $projectId, 'company_id' => $companyId]);
             return response()->json([
                 'success' => false,
                 'message' => 'Projet non trouvé.',
@@ -597,6 +608,12 @@ class ProgressController extends Controller
 
         $update = ProgressUpdate::where('project_id', $projectId)
             ->find($progressId);
+            
+        \Log::info('Mise à jour trouvée', [
+            'update_id' => $update?->id,
+            'has_audio' => $update?->audio_file ? 'yes' : 'no',
+            'audio_file' => $update?->audio_file,
+        ]);
 
         if (!$update) {
             return response()->json([
@@ -623,6 +640,25 @@ class ProgressController extends Controller
         // Retourner le fichier avec les headers appropriés
         $filePath = Storage::disk('public')->path($update->audio_file);
         
+        \Log::info('Chemin du fichier audio', [
+            'audio_file' => $update->audio_file,
+            'file_path' => $filePath,
+            'exists' => file_exists($filePath),
+        ]);
+        
+        // Vérifier que le fichier existe vraiment
+        if (!file_exists($filePath)) {
+            \Log::error('Fichier audio non trouvé', [
+                'audio_file' => $update->audio_file,
+                'file_path' => $filePath,
+                'storage_path' => storage_path('app/public'),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Le fichier audio n\'existe pas sur le serveur.',
+            ], 404);
+        }
+        
         // Déterminer le type MIME basé sur l'extension du fichier
         $extension = strtolower(pathinfo($update->audio_file, PATHINFO_EXTENSION));
         $mimeTypes = [
@@ -636,18 +672,17 @@ class ProgressController extends Controller
         
         $fileName = basename($update->audio_file);
         
-        // Vérifier que le fichier existe vraiment
-        if (!file_exists($filePath)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Le fichier audio n\'existe pas sur le serveur.',
-            ], 404);
-        }
+        \Log::info('Envoi du fichier audio', [
+            'file_name' => $fileName,
+            'mime_type' => $mimeType,
+            'file_size' => filesize($filePath),
+        ]);
 
         return response()->file($filePath, [
             'Content-Type' => $mimeType,
             'Content-Disposition' => 'inline; filename="' . $fileName . '"',
             'Accept-Ranges' => 'bytes',
+            'Content-Length' => filesize($filePath),
         ]);
     }
 }
