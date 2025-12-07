@@ -622,12 +622,32 @@ class ProgressController extends Controller
 
         // Retourner le fichier avec les headers appropriés
         $filePath = Storage::disk('public')->path($update->audio_file);
+        
+        // Déterminer le type MIME basé sur l'extension du fichier
+        $extension = strtolower(pathinfo($update->audio_file, PATHINFO_EXTENSION));
+        $mimeTypes = [
+            'm4a' => 'audio/mp4',
+            'mp3' => 'audio/mpeg',
+            'wav' => 'audio/wav',
+            'aac' => 'audio/aac',
+            'ogg' => 'audio/ogg',
+        ];
+        $mimeType = $mimeTypes[$extension] ?? Storage::disk('public')->mimeType($update->audio_file) ?? 'audio/mpeg';
+        
         $fileName = basename($update->audio_file);
-        $mimeType = Storage::disk('public')->mimeType($update->audio_file) ?? 'audio/mpeg';
+        
+        // Vérifier que le fichier existe vraiment
+        if (!file_exists($filePath)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Le fichier audio n\'existe pas sur le serveur.',
+            ], 404);
+        }
 
-        return response()->download($filePath, $fileName, [
+        return response()->file($filePath, [
             'Content-Type' => $mimeType,
             'Content-Disposition' => 'inline; filename="' . $fileName . '"',
+            'Accept-Ranges' => 'bytes',
         ]);
     }
 }
