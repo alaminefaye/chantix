@@ -70,14 +70,22 @@ class Invitation extends Model
     /**
      * Récupérer les projets directement depuis la DB (sans cache)
      * Utiliser cette méthode au lieu de $invitation->projects pour éviter les problèmes de cache
+     * Cette méthode utilise des requêtes DB brutes pour éviter TOUT cache Eloquent
      */
     public function getProjectsDirectly()
     {
         if (!\Illuminate\Support\Facades\Schema::hasTable('invitation_project')) {
             // Fallback: utiliser l'ancienne colonne project_id
             if ($this->project_id) {
-                $project = Project::find($this->project_id);
-                return $project ? collect([$project]) : collect([]);
+                $projectData = \Illuminate\Support\Facades\DB::table('projects')
+                    ->where('id', $this->project_id)
+                    ->first();
+                if ($projectData) {
+                    $project = new Project();
+                    $project->fill((array) $projectData);
+                    $project->exists = true;
+                    return collect([$project]);
+                }
             }
             return collect([]);
         }
@@ -93,10 +101,25 @@ class Invitation extends Model
                 return collect([]);
             }
 
-            // Récupérer les projets directement
-            return Project::whereIn('id', $projectIds)->get();
+            // Récupérer les projets avec une requête DB brute (pas Eloquent pour éviter le cache)
+            $projectsData = \Illuminate\Support\Facades\DB::table('projects')
+                ->whereIn('id', $projectIds)
+                ->get();
+
+            // Convertir les résultats DB en modèles Project sans utiliser le cache
+            $projects = collect();
+            foreach ($projectsData as $projectData) {
+                $project = new Project();
+                $project->fill((array) $projectData);
+                $project->exists = true;
+                $projects->push($project);
+            }
+
+            return $projects;
         } catch (\Exception $e) {
-            \Log::error('Erreur lors de la récupération directe des projets pour l\'invitation ' . $this->id . ': ' . $e->getMessage());
+            \Log::error('Erreur lors de la récupération directe des projets pour l\'invitation ' . $this->id . ': ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
             return collect([]);
         }
     }

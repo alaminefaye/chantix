@@ -66,9 +66,20 @@ class InvitationController extends Controller
         
         // Précharger les projets pour toutes les invitations en utilisant la méthode directe
         // Cela évite les problèmes de cache sur le serveur
+        // FORCER le rechargement à chaque fois en vidant d'abord la relation
         foreach ($invitations as $invitation) {
+            // Vider complètement la relation pour forcer le rechargement
+            $invitation->unsetRelation('projects');
+            // Charger avec la méthode directe qui utilise des requêtes DB brutes
             $projects = $invitation->getProjectsDirectly();
             $invitation->setRelation('projects', $projects);
+            
+            // Log pour debug sur le serveur
+            \Log::debug('Invitation ' . $invitation->id . ' - Projets chargés', [
+                'count' => $projects->count(),
+                'project_ids' => $projects->pluck('id')->toArray(),
+                'project_names' => $projects->pluck('name')->toArray()
+            ]);
         }
 
         return view('invitations.index', compact('company', 'invitations'));

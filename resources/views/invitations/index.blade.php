@@ -72,8 +72,17 @@
                   </td>
                   <td class="border-bottom-0">
                     @php
-                      // Utiliser la méthode helper qui récupère directement depuis la DB
+                      // FORCER le rechargement en vidant d'abord la relation
+                      $invitation->unsetRelation('projects');
+                      // Utiliser la méthode helper qui récupère directement depuis la DB avec requêtes brutes
                       $invitationProjects = $invitation->getProjectsDirectly();
+                      
+                      // Debug sur le serveur (peut être commenté après vérification)
+                      \Log::debug('Affichage projets invitation ' . $invitation->id, [
+                        'count' => $invitationProjects->count(),
+                        'project_ids' => $invitationProjects->pluck('id')->toArray(),
+                        'project_names' => $invitationProjects->pluck('name')->toArray()
+                      ]);
                     @endphp
                     @if($invitationProjects && $invitationProjects->count() > 0)
                       <div class="d-flex flex-wrap gap-1">
