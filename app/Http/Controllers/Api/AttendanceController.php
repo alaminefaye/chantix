@@ -104,6 +104,12 @@ class AttendanceController extends Controller
      */
     public function checkIn(Request $request, $projectId)
     {
+        \Log::info('Check-in appelé', [
+            'project_id' => $projectId,
+            'user_id' => Auth::id(),
+            'request_data' => $request->except(['check_in_photo']), // Exclure le fichier pour le log
+        ]);
+        
         $user = Auth::user();
         $companyId = $user->current_company_id;
 
