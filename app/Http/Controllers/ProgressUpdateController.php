@@ -61,6 +61,7 @@ class ProgressUpdateController extends Controller
             'description' => 'nullable|string',
             'photos.*' => 'nullable|image|max:5120', // 5MB max
             'videos.*' => 'nullable|mimes:mp4,avi,mov|max:51200', // 50MB max
+            'audio_report' => 'nullable|file|mimes:mp3,m4a,wav|max:10240', // 10MB max
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
         ]);
@@ -81,6 +82,12 @@ class ProgressUpdateController extends Controller
             }
         }
 
+        // Gérer l'upload de l'audio
+        $audioFile = null;
+        if ($request->hasFile('audio_report')) {
+            $audioFile = $request->file('audio_report')->store('progress/audio', 'public');
+        }
+
         $update = ProgressUpdate::create([
             'project_id' => $project->id,
             'user_id' => $user->id,
@@ -88,6 +95,7 @@ class ProgressUpdateController extends Controller
             'description' => $request->description,
             'photos' => !empty($photos) ? $photos : null,
             'videos' => !empty($videos) ? $videos : null,
+            'audio_file' => $audioFile,
             'latitude' => $request->latitude,
             'longitude' => $request->longitude,
         ]);

@@ -76,6 +76,30 @@
                 </div>
               @endif
 
+              @if($update->audio_file)
+                <div class="mb-3">
+                  <h6 class="fw-semibold mb-2">Rapport audio</h6>
+                  <div class="card border-0 bg-light">
+                    <div class="card-body">
+                      <div class="d-flex align-items-center gap-3">
+                        <div class="bg-success bg-opacity-10 rounded-circle p-3">
+                          <i class="ti ti-microphone text-success fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                          <p class="mb-1 fw-semibold">Audio disponible</p>
+                          <audio controls class="w-100" style="max-width: 100%;">
+                            <source src="{{ asset('storage/' . $update->audio_file) }}" type="audio/mpeg">
+                            <source src="{{ asset('storage/' . $update->audio_file) }}" type="audio/mp4">
+                            <source src="{{ asset('storage/' . $update->audio_file) }}" type="audio/wav">
+                            Votre navigateur ne supporte pas la lecture audio.
+                          </audio>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              @endif
+
               @if($update->latitude && $update->longitude)
                 <div class="mb-2">
                   <small class="text-muted">
