@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use App\Mail\InvitationMail;
 
 class InvitationController extends Controller
@@ -46,8 +47,13 @@ class InvitationController extends Controller
             abort(403, 'Seuls les administrateurs peuvent gérer les invitations. Votre rôle: ' . ($role ? $role->name : 'aucun'));
         }
 
+        $withRelations = ['inviter', 'role', 'project'];
+        if (Schema::hasTable('invitation_project')) {
+            $withRelations[] = 'projects';
+        }
+        
         $invitations = $company->invitations()
-            ->with('inviter', 'role', 'project', 'projects')
+            ->with($withRelations)
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
@@ -246,9 +252,13 @@ class InvitationController extends Controller
                     'message' => $validated['message'] ?? 'Compte créé directement',
                 ]);
 
-                // Associer les projets à l'invitation
-                if (isset($validated['project_ids']) && !empty($validated['project_ids'])) {
-                    $invitation->projects()->sync($validated['project_ids']);
+                // Associer les projets à l'invitation (seulement si la table existe)
+                if (Schema::hasTable('invitation_project') && isset($validated['project_ids']) && !empty($validated['project_ids'])) {
+                    try {
+                        $invitation->projects()->sync($validated['project_ids']);
+                    } catch (\Exception $e) {
+                        \Log::warning('Erreur lors de la synchronisation des projets: ' . $e->getMessage());
+                    }
                 }
 
                 return redirect()->route('invitations.index', $company)
@@ -281,9 +291,13 @@ class InvitationController extends Controller
             'message' => $validated['message'] ?? null,
         ]);
 
-        // Associer les projets à l'invitation
-        if (isset($validated['project_ids']) && !empty($validated['project_ids'])) {
-            $invitation->projects()->sync($validated['project_ids']);
+        // Associer les projets à l'invitation (seulement si la table existe)
+        if (Schema::hasTable('invitation_project') && isset($validated['project_ids']) && !empty($validated['project_ids'])) {
+            try {
+                $invitation->projects()->sync($validated['project_ids']);
+            } catch (\Exception $e) {
+                \Log::warning('Erreur lors de la synchronisation des projets: ' . $e->getMessage());
+            }
         }
 
         // Envoyer l'email d'invitation
@@ -339,9 +353,23 @@ class InvitationController extends Controller
         ]);
 
         // Associer l'utilisateur aux projets si des projets sont spécifiés dans l'invitation
-        if ($invitation->projects()->count() > 0) {
-            foreach ($invitation->projects as $project) {
-                if (!$project->users()->where('users.id', $user->id)->exists()) {
+        if (Schema::hasTable('invitation_project')) {
+            try {
+                if ($invitation->projects()->count() > 0) {
+                    foreach ($invitation->projects as $project) {
+                        if (!$project->users()->where('users.id', $user->id)->exists()) {
+                            $project->users()->attach($user->id);
+                        }
+                    }
+                }
+            } catch (\Exception $e) {
+                \Log::warning('Erreur lors de l\'association des projets à l\'utilisateur: ' . $e->getMessage());
+            }
+        } else {
+            // Fallback: utiliser l'ancienne colonne project_id si elle existe
+            if ($invitation->project_id) {
+                $project = \App\Models\Project::find($invitation->project_id);
+                if ($project && !$project->users()->where('users.id', $user->id)->exists()) {
                     $project->users()->attach($user->id);
                 }
             }
@@ -398,7 +426,15 @@ class InvitationController extends Controller
             abort(403, 'Seuls les administrateurs peuvent voir les détails des invitations. Votre rôle: ' . ($role ? $role->name : 'aucun'));
         }
 
-        $invitation->load('inviter', 'role', 'company', 'projects');
+        $invitation->load('inviter', 'role', 'company');
+        // Charger les projets seulement si la table existe
+        if (Schema::hasTable('invitation_project')) {
+            try {
+                $invitation->load('projects');
+            } catch (\Exception $e) {
+                \Log::warning('Erreur lors du chargement des projets: ' . $e->getMessage());
+            }
+        }
 
         return view('invitations.show', compact('company', 'invitation'));
     }
@@ -450,7 +486,25 @@ class InvitationController extends Controller
         $roles = Role::all();
         $projects = $company->projects()->orderBy('name')->get();
 
-        return view('invitations.edit', compact('company', 'invitation', 'roles', 'projects'));
+        // Récupérer les IDs des projets associés de manière sécurisée
+        $selectedProjectIds = [];
+        try {
+            if (Schema::hasTable('invitation_project')) {
+                $selectedProjectIds = $invitation->projects->pluck('id')->toArray();
+            } else {
+                // Fallback: utiliser l'ancienne colonne project_id si elle existe
+                if ($invitation->project_id) {
+                    $selectedProjectIds = [$invitation->project_id];
+                }
+            }
+        } catch (\Exception $e) {
+            // Si la table n'existe pas, utiliser l'ancienne colonne project_id comme fallback
+            if ($invitation->project_id) {
+                $selectedProjectIds = [$invitation->project_id];
+            }
+        }
+
+        return view('invitations.edit', compact('company', 'invitation', 'roles', 'projects', 'selectedProjectIds'));
     }
 
     /**
@@ -530,19 +584,44 @@ class InvitationController extends Controller
             }
         }
 
-        // Récupérer les anciens projets
-        $oldProjectIds = $invitation->projects->pluck('id')->toArray();
+        // Récupérer les anciens projets de manière sécurisée
+        $oldProjectIds = [];
+        try {
+            if (Schema::hasTable('invitation_project')) {
+                $oldProjectIds = $invitation->projects->pluck('id')->toArray();
+            } else {
+                // Fallback: utiliser l'ancienne colonne project_id si elle existe
+                if ($invitation->project_id) {
+                    $oldProjectIds = [$invitation->project_id];
+                }
+            }
+        } catch (\Exception $e) {
+            // Si la table n'existe pas, utiliser l'ancienne colonne project_id comme fallback
+            if ($invitation->project_id) {
+                $oldProjectIds = [$invitation->project_id];
+            }
+        }
         
         // Mettre à jour l'invitation (sans project_ids car ce n'est pas une colonne de la table)
         $invitationData = $validated;
         unset($invitationData['project_ids']);
         $invitation->update($invitationData);
 
-        // Mettre à jour les projets associés
-        if (isset($validated['project_ids']) && !empty($validated['project_ids'])) {
-            $invitation->projects()->sync($validated['project_ids']);
-        } else {
-            $invitation->projects()->detach();
+        // Mettre à jour les projets associés (seulement si la table existe)
+        if (Schema::hasTable('invitation_project')) {
+            if (isset($validated['project_ids']) && !empty($validated['project_ids'])) {
+                try {
+                    $invitation->projects()->sync($validated['project_ids']);
+                } catch (\Exception $e) {
+                    \Log::warning('Erreur lors de la synchronisation des projets: ' . $e->getMessage());
+                }
+            } else {
+                try {
+                    $invitation->projects()->detach();
+                } catch (\Exception $e) {
+                    \Log::warning('Erreur lors du détachement des projets: ' . $e->getMessage());
+                }
+            }
         }
 
         // Si l'invitation a été acceptée, mettre à jour l'association projet de l'utilisateur

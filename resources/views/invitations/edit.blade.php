@@ -80,7 +80,7 @@
                 <label for="project_ids" class="form-label">Projets <span class="text-muted">(optionnel)</span></label>
                 <select class="form-select @error('project_ids') is-invalid @enderror" id="project_ids" name="project_ids[]" multiple size="5">
                   @foreach($projects as $project)
-                    <option value="{{ $project->id }}" {{ in_array($project->id, old('project_ids', $invitation->projects->pluck('id')->toArray())) ? 'selected' : '' }}>
+                    <option value="{{ $project->id }}" {{ in_array($project->id, old('project_ids', $selectedProjectIds ?? [])) ? 'selected' : '' }}>
                       {{ $project->name }}
                     </option>
                   @endforeach

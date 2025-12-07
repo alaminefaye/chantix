@@ -54,12 +54,39 @@
             <div class="mb-3">
               <label class="form-label fw-semibold">Projets</label>
               <p class="mb-0">
-                @if($invitation->projects->count() > 0)
+                @php
+                  $invitationProjects = [];
+                  try {
+                    if ($invitation->relationLoaded('projects')) {
+                      $invitationProjects = $invitation->projects;
+                    } elseif (method_exists($invitation, 'projects')) {
+                      $invitationProjects = $invitation->projects;
+                    }
+                  } catch (\Exception $e) {
+                    // Si la table n'existe pas, utiliser l'ancienne colonne project_id
+                    if ($invitation->project_id) {
+                      $project = \App\Models\Project::find($invitation->project_id);
+                      if ($project) {
+                        $invitationProjects = collect([$project]);
+                      }
+                    }
+                  }
+                @endphp
+                @if(count($invitationProjects) > 0)
                   <div class="d-flex flex-wrap gap-1">
-                    @foreach($invitation->projects as $project)
+                    @foreach($invitationProjects as $project)
                       <span class="badge bg-primary rounded-3 fw-semibold">{{ $project->name }}</span>
                     @endforeach
                   </div>
+                @elseif($invitation->project_id)
+                  @php
+                    $project = \App\Models\Project::find($invitation->project_id);
+                  @endphp
+                  @if($project)
+                    <span class="badge bg-primary rounded-3 fw-semibold">{{ $project->name }}</span>
+                  @else
+                    <span class="badge bg-secondary rounded-3 fw-semibold">Tous les projets de l'entreprise</span>
+                  @endif
                 @else
                   <span class="badge bg-secondary rounded-3 fw-semibold">Tous les projets de l'entreprise</span>
                 @endif
