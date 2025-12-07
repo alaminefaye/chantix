@@ -44,7 +44,7 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     ]);
     
     // Pointage
-    Route::prefix('projects/{project}')->group(function () {
+    Route::prefix('projects/{projectId}')->group(function () {
         Route::get('/attendances', [\App\Http\Controllers\Api\AttendanceController::class, 'index']);
         Route::post('/attendances/check-in', [\App\Http\Controllers\Api\AttendanceController::class, 'checkIn']);
         Route::post('/attendances/{attendance}/check-out', [\App\Http\Controllers\Api\AttendanceController::class, 'checkOut']);
