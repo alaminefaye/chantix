@@ -72,7 +72,10 @@ class Project extends Model
 
     /**
      * Scope pour les projets accessibles par un utilisateur
-     * IMPORTANT: Un utilisateur ne voit QUE les projets qui lui sont explicitement assignés
+     * Un utilisateur voit :
+     * - Tous les projets s'il est admin ou super admin
+     * - Les projets qu'il a créés
+     * - Les projets qui lui sont explicitement assignés dans project_user
      */
     public function scopeAccessibleByUser($query, $user, $companyId)
     {
@@ -87,18 +90,17 @@ class Project extends Model
             ->pluck('project_id')
             ->toArray();
 
-        // Si l'utilisateur n'a AUCUN projet assigné, il ne voit RIEN (sécurité)
-        if (empty($assignedProjectIds)) {
-            // Retourner une requête qui ne retournera jamais de résultats
-            return $query->where('company_id', $companyId)
-                ->whereRaw('1 = 0'); // Condition toujours fausse
-        }
-
-        // Utilisateur normal : voir SEULEMENT les projets auxquels il est explicitement associé
-        // SÉCURITÉ: Ne pas inclure les projets créés par l'utilisateur sauf s'ils sont aussi dans project_user
-        // Un utilisateur ne doit voir QUE les projets qui lui sont explicitement assignés
+        // Utilisateur normal : voir les projets qu'il a créés OU ceux qui lui sont assignés
         return $query->where('company_id', $companyId)
-            ->whereIn('id', $assignedProjectIds); // SEULEMENT les projets dans project_user
+            ->where(function($q) use ($user, $assignedProjectIds) {
+                // Projets créés par l'utilisateur
+                $q->where('created_by', $user->id);
+                
+                // OU projets assignés dans project_user
+                if (!empty($assignedProjectIds)) {
+                    $q->orWhereIn('id', $assignedProjectIds);
+                }
+            });
     }
 
     /**
