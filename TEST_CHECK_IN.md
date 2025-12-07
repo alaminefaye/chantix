@@ -114,3 +114,4 @@ POST  api/v1/projects/{projectId}/attendances/check-in  Api\AttendanceController
 ```
 
 Si vous voyez `{project}` au lieu de `{projectId}`, le fichier `routes/api.php` n'a pas été mis à jour correctement.
+

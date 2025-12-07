@@ -98,3 +98,4 @@ Après avoir exécuté la migration :
 - Une fois la migration exécutée, toutes les nouvelles invitations pourront avoir plusieurs projets
 - Les invitations existantes avec `project_id` continueront de fonctionner, mais pour gérer plusieurs projets, il faudra les modifier via le formulaire d'édition
 
+
