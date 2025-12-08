@@ -74,8 +74,10 @@ class Project extends Model
      * Scope pour les projets accessibles par un utilisateur
      * Un utilisateur voit :
      * - Tous les projets s'il est admin ou super admin
-     * - Les projets qu'il a créés
-     * - Les projets qui lui sont explicitement assignés dans project_user
+     * - Si des projets sont explicitement assignés dans project_user : SEULEMENT ces projets
+     * - Sinon, selon le rôle :
+     *   - Superviseur/Ingénieur : tous les projets de l'entreprise
+     *   - Autres : projets qu'il a créés
      */
     public function scopeAccessibleByUser($query, $user, $companyId)
     {
@@ -90,17 +92,25 @@ class Project extends Model
             ->pluck('project_id')
             ->toArray();
 
-        // Utilisateur normal : voir les projets qu'il a créés OU ceux qui lui sont assignés
+        // Si l'utilisateur a des projets assignés, il ne voit QUE ces projets
+        // (même s'il est superviseur ou ingénieur)
+        if (!empty($assignedProjectIds)) {
+            return $query->where('company_id', $companyId)
+                ->whereIn('id', $assignedProjectIds);
+        }
+
+        // Si aucun projet n'est assigné, vérifier le rôle
+        $role = $user->roleInCompany($companyId);
+        $roleName = $role ? $role->name : null;
+
+        // Superviseur et Ingénieur voient tous les projets s'ils n'ont pas de projets assignés
+        if (in_array($roleName, ['superviseur', 'ingenieur'])) {
+            return $query->where('company_id', $companyId);
+        }
+
+        // Autres utilisateurs : voir seulement les projets qu'ils ont créés
         return $query->where('company_id', $companyId)
-            ->where(function($q) use ($user, $assignedProjectIds) {
-                // Projets créés par l'utilisateur
-                $q->where('created_by', $user->id);
-                
-                // OU projets assignés dans project_user
-                if (!empty($assignedProjectIds)) {
-                    $q->orWhereIn('id', $assignedProjectIds);
-                }
-            });
+            ->where('created_by', $user->id);
     }
 
     /**
