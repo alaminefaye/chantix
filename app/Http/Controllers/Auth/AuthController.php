@@ -8,6 +8,7 @@ use App\Models\Company;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rules;
 
 class AuthController extends Controller
@@ -133,12 +134,44 @@ class AuthController extends Controller
                 'joined_at' => now(),
             ]);
 
-            // Associer l'utilisateur au projet si un projet est spécifié dans l'invitation
-            if ($invitation->project_id) {
-                $project = \App\Models\Project::find($invitation->project_id);
-                if ($project && !$project->users()->where('users.id', $user->id)->exists()) {
-                    $project->users()->attach($user->id);
+            // Associer l'utilisateur aux projets spécifiés dans l'invitation
+            // Utiliser la méthode directe pour éviter les problèmes de cache
+            $invitationProjects = $invitation->getProjectsDirectly();
+            
+            if ($invitationProjects->count() > 0) {
+                // Associer l'utilisateur à TOUS les projets de l'invitation
+                $projectIds = $invitationProjects->pluck('id')->toArray();
+                
+                foreach ($projectIds as $projectId) {
+                    // Vérifier directement dans la DB pour éviter les problèmes de cache
+                    $exists = DB::table('project_user')
+                        ->where('user_id', $user->id)
+                        ->where('project_id', $projectId)
+                        ->exists();
+                    
+                    if (!$exists) {
+                        DB::table('project_user')->insert([
+                            'user_id' => $user->id,
+                            'project_id' => $projectId,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
                 }
+                
+                \Log::info('Projets associés à l\'utilisateur lors de l\'inscription avec invitation', [
+                    'user_id' => $user->id,
+                    'invitation_id' => $invitation->id,
+                    'project_ids' => $projectIds,
+                    'count' => count($projectIds)
+                ]);
+            } else {
+                // Si aucun projet spécifique n'est assigné dans l'invitation,
+                // l'utilisateur n'a accès à AUCUN projet (sécurité)
+                \Log::info('Aucun projet assigné dans l\'invitation - utilisateur sans accès projet (inscription)', [
+                    'user_id' => $user->id,
+                    'invitation_id' => $invitation->id
+                ]);
             }
 
             $user->current_company_id = $invitation->company_id;
