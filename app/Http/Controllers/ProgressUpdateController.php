@@ -61,7 +61,14 @@ class ProgressUpdateController extends Controller
             'description' => 'nullable|string',
             'photos.*' => 'nullable|image|max:5120', // 5MB max
             'videos.*' => 'nullable|mimes:mp4,avi,mov|max:51200', // 50MB max
-            'audio_report' => 'nullable|file|mimes:mp3,m4a,wav|max:10240', // 10MB max
+            // Accepter plusieurs types MIME pour les fichiers audio (Android peut détecter différemment)
+            'audio_report' => [
+                'nullable',
+                'file',
+                'mimes:mp3,m4a,wav,aac',
+                'mimetypes:audio/mpeg,audio/mp4,audio/x-m4a,audio/m4a,audio/aac,audio/wav,audio/x-wav',
+                'max:10240'
+            ],
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
         ]);

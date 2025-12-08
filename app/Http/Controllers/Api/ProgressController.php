@@ -116,7 +116,14 @@ class ProgressController extends Controller
             'longitude' => 'nullable|numeric',
             'photos.*' => 'nullable|image|max:5120', // 5MB max
             'videos.*' => 'nullable|mimes:mp4,avi,mov|max:51200', // 50MB max
-            'audio_report' => 'nullable|file|mimes:mp3,m4a,wav|max:10240', // 10MB max
+            // Accepter plusieurs types MIME pour les fichiers audio (Android peut détecter différemment)
+            'audio_report' => [
+                'nullable',
+                'file',
+                'mimes:mp3,m4a,wav,aac',
+                'mimetypes:audio/mpeg,audio/mp4,audio/x-m4a,audio/m4a,audio/aac,audio/wav,audio/x-wav',
+                'max:10240'
+            ],
         ]);
 
         if ($validator->fails()) {
@@ -286,7 +293,14 @@ class ProgressController extends Controller
             'longitude' => 'nullable|numeric|between:-180,180',
             'photos.*' => 'nullable|image|max:5120',
             'videos.*' => 'nullable|mimes:mp4,avi,mov|max:51200',
-            'audio_report' => 'nullable|file|mimes:mp3,m4a,wav|max:10240',
+            // Accepter plusieurs types MIME pour les fichiers audio (Android peut détecter différemment)
+            'audio_report' => [
+                'nullable',
+                'file',
+                'mimes:mp3,m4a,wav,aac',
+                'mimetypes:audio/mpeg,audio/mp4,audio/x-m4a,audio/m4a,audio/aac,audio/wav,audio/x-wav',
+                'max:10240'
+            ],
             'existing_photos' => 'nullable|array',
             'existing_photos.*' => 'nullable|string',
             'existing_videos' => 'nullable|array',

@@ -76,3 +76,4 @@ Le code a été corrigé pour :
 - ✅ Supprimer automatiquement les projets non désirés lors de la modification
 - ✅ Utiliser des requêtes directes pour éviter les problèmes de cache
 - ✅ Vérifier la cohérence après chaque modification
+
