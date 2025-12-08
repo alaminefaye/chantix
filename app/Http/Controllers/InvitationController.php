@@ -202,17 +202,17 @@ class InvitationController extends Controller
                         'joined_at' => now(),
                     ]);
 
+                    // IMPORTANT: Supprimer TOUS les anciens projets assignés avant d'assigner les nouveaux
+                    // L'utilisateur ne doit voir QUE les projets spécifiés dans l'invitation
+                    DB::table('project_user')->where('user_id', $existingUser->id)->delete();
+                    
                     // Associer l'utilisateur aux projets si des projets sont spécifiés
                     if (isset($validated['project_ids']) && !empty($validated['project_ids'])) {
                         $projectIds = $validated['project_ids'];
                         foreach ($projectIds as $projectId) {
-                            // Vérifier directement dans la DB
-                            $exists = DB::table('project_user')
-                                ->where('user_id', $existingUser->id)
-                                ->where('project_id', $projectId)
-                                ->exists();
-                            
-                            if (!$exists) {
+                            // Vérifier que le projet appartient à l'entreprise
+                            $project = \App\Models\Project::find($projectId);
+                            if ($project && $project->company_id == $company->id) {
                                 DB::table('project_user')->insert([
                                     'user_id' => $existingUser->id,
                                     'project_id' => $projectId,
@@ -221,6 +221,17 @@ class InvitationController extends Controller
                                 ]);
                             }
                         }
+                        
+                        \Log::info('Projets assignés à l\'utilisateur existant (création directe)', [
+                            'user_id' => $existingUser->id,
+                            'project_ids' => $projectIds,
+                            'count' => count($projectIds)
+                        ]);
+                    } else {
+                        // Si aucun projet n'est spécifié, l'utilisateur n'a AUCUN projet assigné
+                        \Log::info('Aucun projet assigné - utilisateur sans accès projet (création directe)', [
+                            'user_id' => $existingUser->id
+                        ]);
                     }
 
                     return redirect()->route('invitations.index', $company)
@@ -263,15 +274,36 @@ class InvitationController extends Controller
                     'joined_at' => now(),
                 ]);
 
+                // IMPORTANT: L'utilisateur ne doit voir QUE les projets spécifiés dans l'invitation
+                // Supprimer tous les projets existants (au cas où, même si c'est un nouvel utilisateur)
+                DB::table('project_user')->where('user_id', $newUser->id)->delete();
+                
                 // Associer l'utilisateur aux projets si des projets sont spécifiés
                 if (isset($validated['project_ids']) && !empty($validated['project_ids'])) {
                     $projectIds = $validated['project_ids'];
                     foreach ($projectIds as $projectId) {
+                        // Vérifier que le projet appartient à l'entreprise
                         $project = \App\Models\Project::find($projectId);
-                        if ($project && !$project->users()->where('users.id', $newUser->id)->exists()) {
-                            $project->users()->attach($newUser->id);
+                        if ($project && $project->company_id == $company->id) {
+                            DB::table('project_user')->insert([
+                                'user_id' => $newUser->id,
+                                'project_id' => $projectId,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ]);
                         }
                     }
+                    
+                    \Log::info('Projets assignés au nouvel utilisateur (création directe)', [
+                        'user_id' => $newUser->id,
+                        'project_ids' => $projectIds,
+                        'count' => count($projectIds)
+                    ]);
+                } else {
+                    // Si aucun projet n'est spécifié, l'utilisateur n'a AUCUN projet assigné
+                    \Log::info('Aucun projet assigné - nouvel utilisateur sans accès projet (création directe)', [
+                        'user_id' => $newUser->id
+                    ]);
                 }
 
                 // Créer une invitation marquée comme acceptée pour l'historique
@@ -387,6 +419,10 @@ class InvitationController extends Controller
             'joined_at' => now(),
         ]);
 
+        // IMPORTANT: Supprimer TOUS les anciens projets assignés avant d'assigner les nouveaux
+        // L'utilisateur ne doit voir QUE les projets spécifiés dans l'invitation
+        DB::table('project_user')->where('user_id', $user->id)->delete();
+        
         // Associer l'utilisateur aux projets si des projets sont spécifiés dans l'invitation
         // Utiliser la méthode directe pour éviter les problèmes de cache
         $invitationProjects = $invitation->getProjectsDirectly();
@@ -396,13 +432,9 @@ class InvitationController extends Controller
             $projectIds = $invitationProjects->pluck('id')->toArray();
             
             foreach ($projectIds as $projectId) {
-                // Vérifier directement dans la DB pour éviter les problèmes de cache
-                $exists = DB::table('project_user')
-                    ->where('user_id', $user->id)
-                    ->where('project_id', $projectId)
-                    ->exists();
-                
-                if (!$exists) {
+                // Vérifier que le projet appartient à l'entreprise
+                $project = \App\Models\Project::find($projectId);
+                if ($project && $project->company_id == $invitation->company_id) {
                     DB::table('project_user')->insert([
                         'user_id' => $user->id,
                         'project_id' => $projectId,
@@ -718,36 +750,19 @@ class InvitationController extends Controller
             if ($invitedUser) {
                 // S'assurer que project_ids est un tableau
                 $newProjectIds = isset($validated['project_ids']) && is_array($validated['project_ids']) 
-                    ? array_filter($validated['project_ids']) // Filtrer les valeurs vides
+                    ? array_filter(array_map('intval', $validated['project_ids'])) // Filtrer et convertir en entiers
                     : [];
                 
-                // Retirer l'utilisateur des anciens projets qui ne sont plus dans la liste
-                // Utiliser des requêtes directes pour éviter les problèmes de cache
-                $projectsToRemove = array_diff($oldProjectIds, $newProjectIds);
-                if (!empty($projectsToRemove)) {
-                    $deleted = DB::table('project_user')
-                        ->where('user_id', $invitedUser->id)
-                        ->whereIn('project_id', $projectsToRemove)
-                        ->delete();
-                    
-                    \Log::info('Utilisateur retiré des projets (update invitation)', [
-                        'user_id' => $invitedUser->id,
-                        'project_ids_removed' => $projectsToRemove,
-                        'count_removed' => $deleted
-                    ]);
-                }
+                // IMPORTANT: Supprimer TOUS les projets actuels et assigner seulement les nouveaux
+                // L'utilisateur ne doit voir QUE les projets spécifiés dans l'invitation modifiée
+                DB::table('project_user')->where('user_id', $invitedUser->id)->delete();
                 
-                // Ajouter l'utilisateur aux nouveaux projets (tous les projets sélectionnés)
-                $projectsToAdd = array_diff($newProjectIds, $oldProjectIds);
-                if (!empty($projectsToAdd)) {
-                    foreach ($projectsToAdd as $projectId) {
-                        // Vérifier directement dans la DB pour éviter les problèmes de cache
-                        $exists = DB::table('project_user')
-                            ->where('user_id', $invitedUser->id)
-                            ->where('project_id', $projectId)
-                            ->exists();
-                        
-                        if (!$exists) {
+                // Assigner les nouveaux projets (seulement ceux spécifiés dans l'invitation)
+                if (!empty($newProjectIds)) {
+                    foreach ($newProjectIds as $projectId) {
+                        // Vérifier que le projet appartient à l'entreprise
+                        $project = \App\Models\Project::find($projectId);
+                        if ($project && $project->company_id == $invitation->company_id) {
                             DB::table('project_user')->insert([
                                 'user_id' => $invitedUser->id,
                                 'project_id' => $projectId,
@@ -757,10 +772,17 @@ class InvitationController extends Controller
                         }
                     }
                     
-                    \Log::info('Utilisateur ajouté aux projets (update invitation)', [
+                    \Log::info('Projets mis à jour pour l\'utilisateur (update invitation)', [
                         'user_id' => $invitedUser->id,
-                        'project_ids_added' => $projectsToAdd,
-                        'count_added' => count($projectsToAdd)
+                        'old_project_ids' => $oldProjectIds,
+                        'new_project_ids' => $newProjectIds,
+                        'count' => count($newProjectIds)
+                    ]);
+                } else {
+                    // Si aucun projet n'est sélectionné, l'utilisateur n'a AUCUN projet
+                    \Log::info('Tous les projets supprimés - utilisateur sans accès projet (update invitation)', [
+                        'user_id' => $invitedUser->id,
+                        'old_project_ids' => $oldProjectIds
                     ]);
                 }
                 

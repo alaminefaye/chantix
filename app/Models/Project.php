@@ -123,23 +123,18 @@ class Project extends Model
                 ->whereIn('id', $assignedProjectIds);
         }
 
-        // Si aucun projet n'est assigné, vérifier le rôle
-        // Superviseur et Ingénieur voient tous les projets s'ils n'ont pas de projets assignés
-        if (in_array($roleName, ['superviseur', 'ingenieur'])) {
-            \Log::info('accessibleByUser: Superviseur/Ingénieur sans projets assignés - voir tous les projets', [
-                'user_id' => $user->id,
-                'role_name' => $roleName
-            ]);
-            return $query->where('company_id', $companyId);
-        }
-
-        // Autres utilisateurs : voir seulement les projets qu'ils ont créés
-        \Log::info('accessibleByUser: Utilisateur normal - voir seulement les projets créés', [
+        // IMPORTANT: Si aucun projet n'est assigné, l'utilisateur ne voit AUCUN projet
+        // Même s'il est superviseur ou ingénieur - il doit être explicitement assigné à des projets
+        // via l'invitation pour voir des projets
+        \Log::info('accessibleByUser: Aucun projet assigné - utilisateur ne voit AUCUN projet', [
             'user_id' => $user->id,
-            'role_name' => $roleName
+            'role_name' => $roleName,
+            'message' => 'L\'utilisateur doit être assigné à des projets via l\'invitation pour voir des projets'
         ]);
+        
+        // Retourner une requête qui ne retournera aucun résultat
         return $query->where('company_id', $companyId)
-            ->where('created_by', $user->id);
+            ->whereRaw('1 = 0'); // Condition toujours fausse = aucun résultat
     }
 
     /**
