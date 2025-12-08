@@ -61,12 +61,21 @@ class ProgressUpdateController extends Controller
             'description' => 'nullable|string',
             'photos.*' => 'nullable|image|max:5120', // 5MB max
             'videos.*' => 'nullable|mimes:mp4,avi,mov|max:51200', // 50MB max
-            // Accepter plusieurs types MIME pour les fichiers audio (Android peut détecter différemment)
+            // Accepter les fichiers audio - vérifier seulement l'extension, pas le type MIME réel
+            // (Android peut détecter le type MIME différemment selon le système)
             'audio_report' => [
                 'nullable',
                 'file',
-                'mimes:mp3,m4a,wav,aac',
-                'mimetypes:audio/mpeg,audio/mp4,audio/x-m4a,audio/m4a,audio/aac,audio/wav,audio/x-wav',
+                function ($attribute, $value, $fail) use ($request) {
+                    if ($request->hasFile($attribute)) {
+                        $file = $request->file($attribute);
+                        $extension = strtolower($file->getClientOriginalExtension());
+                        $allowedExtensions = ['mp3', 'm4a', 'wav', 'aac'];
+                        if (!in_array($extension, $allowedExtensions)) {
+                            $fail('Le fichier audio doit être de type: ' . implode(', ', $allowedExtensions) . '.');
+                        }
+                    }
+                },
                 'max:10240'
             ],
             'latitude' => 'nullable|numeric',
