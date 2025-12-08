@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Project;
+use App\Services\PushNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -267,16 +268,82 @@ class ProjectController extends Controller
             ], 422);
         }
 
+        // Sauvegarder les anciennes valeurs pour détecter les changements importants
+        $oldStatus = $project->status;
+        $oldProgress = $project->progress;
+        
         $project->update($request->only([
             'name', 'description', 'address', 'latitude', 'longitude',
             'start_date', 'end_date', 'budget', 'status', 'progress',
             'client_name', 'client_contact',
         ]));
 
+        // Recharger le projet avec les relations
+        $project->refresh();
+        $project->load('creator');
+
+        // Envoyer des notifications push aux utilisateurs concernés (en arrière-plan pour ne pas bloquer)
+        try {
+            \Log::info("📝 Starting notification process for project update", [
+                'project_id' => $project->id,
+                'user_id' => $user->id,
+            ]);
+
+            $pushService = new PushNotificationService();
+            
+            // Déterminer le message selon ce qui a changé
+            $message = "Le projet \"{$project->name}\" a été mis à jour";
+            $title = "Projet mis à jour";
+            
+            // Si le statut a changé, mentionner le nouveau statut
+            if ($oldStatus !== $project->status) {
+                $statusLabels = [
+                    'non_demarre' => 'Non démarré',
+                    'en_cours' => 'En cours',
+                    'termine' => 'Terminé',
+                    'bloque' => 'Bloqué',
+                ];
+                $newStatusLabel = $statusLabels[$project->status] ?? $project->status;
+                $message = "Le statut du projet \"{$project->name}\" a été changé à : {$newStatusLabel}";
+                $title = "Statut du projet modifié";
+            } elseif ($oldProgress !== $project->progress) {
+                // Si l'avancement a changé
+                $message = "L'avancement du projet \"{$project->name}\" a été mis à jour : {$project->progress}%";
+                $title = "Avancement du projet mis à jour";
+            }
+            
+            // Recharger le projet pour s'assurer d'avoir toutes les données
+            $project->refresh();
+            
+            $notifications = $pushService->notifyProjectStakeholders(
+                $project,
+                'project_updated',
+                $title,
+                $message,
+                [
+                    'project_id' => $project->id,
+                    'project_name' => $project->name,
+                    'status' => $project->status,
+                    'progress' => $project->progress,
+                ],
+                $user->id // Exclure l'utilisateur qui a mis à jour le projet
+            );
+
+            \Log::info("✅ Notification process completed for project update", [
+                'notifications_created' => count($notifications),
+            ]);
+        } catch (\Exception $e) {
+            // Ne pas faire échouer la mise à jour du projet si l'envoi de notification échoue
+            \Log::error("❌ Failed to send project update notification: " . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'project_id' => $project->id ?? null,
+            ]);
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Projet mis à jour avec succès.',
-            'data' => $project->load('creator'),
+            'data' => $project,
         ], 200);
     }
 
