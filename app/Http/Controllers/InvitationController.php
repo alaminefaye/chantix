@@ -792,13 +792,17 @@ class InvitationController extends Controller
                     ->pluck('project_id')
                     ->toArray();
                 
+                // Calculer les projets retirés et ajoutés pour le log
+                $projectsRemoved = array_diff($oldProjectIds, $newProjectIds);
+                $projectsAdded = array_diff($newProjectIds, $oldProjectIds);
+                
                 \Log::info('Mise à jour des associations projet-utilisateur terminée', [
                     'user_id' => $invitedUser->id,
                     'old_project_ids' => $oldProjectIds,
                     'new_project_ids' => $newProjectIds,
                     'final_project_ids' => $finalProjectIds,
-                    'removed_count' => count($projectsToRemove),
-                    'added_count' => count($projectsToAdd ?? []),
+                    'removed_count' => count($projectsRemoved),
+                    'added_count' => count($projectsAdded),
                     'final_count' => count($finalProjectIds),
                     'matches_invitation' => empty(array_diff($finalProjectIds, $newProjectIds)) && 
                                           empty(array_diff($newProjectIds, $finalProjectIds))
