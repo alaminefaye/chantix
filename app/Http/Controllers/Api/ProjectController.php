@@ -55,14 +55,28 @@ class ProjectController extends Controller
 
         $projects = $query->get();
 
+        // Vérifier les projets assignés dans project_user
+        $assignedProjectIds = \Illuminate\Support\Facades\DB::table('project_user')
+            ->where('user_id', $user->id)
+            ->pluck('project_id')
+            ->toArray();
+        
+        $role = $user->roleInCompany($companyId);
+        $roleName = $role ? $role->name : null;
+
         // Log pour debug (peut être commenté en production)
         \Log::info('API Projects - Projets retournés pour l\'utilisateur', [
             'user_id' => $user->id,
             'user_email' => $user->email,
             'company_id' => $companyId,
+            'role_name' => $roleName,
             'projects_count' => $projects->count(),
             'project_ids' => $projects->pluck('id')->toArray(),
-            'is_admin' => $user->isSuperAdmin() || $user->hasRoleInCompany('admin', $companyId)
+            'assigned_project_ids' => $assignedProjectIds,
+            'assigned_count' => count($assignedProjectIds),
+            'is_admin' => $user->isSuperAdmin() || $user->hasRoleInCompany('admin', $companyId),
+            'is_super_admin' => $user->isSuperAdmin(),
+            'has_role_admin' => $user->hasRoleInCompany('admin', $companyId)
         ]);
 
         return response()->json([
