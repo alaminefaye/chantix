@@ -206,27 +206,6 @@ class ProgressController extends Controller
             }
         }
 
-        // Envoyer des notifications push aux utilisateurs concernés
-        try {
-            $pushService = new PushNotificationService();
-            $description = $request->description ? substr($request->description, 0, 100) . '...' : 'Sans description';
-            $pushService->notifyProjectStakeholders(
-                $project,
-                'progress_created',
-                'Nouvelle mise à jour d\'avancement',
-                "Le projet \"{$project->name}\" a été mis à jour : {$progress}% d'avancement",
-                [
-                    'progress_update_id' => $update->id,
-                    'progress_percentage' => $progress,
-                    'description' => $request->description,
-                ],
-                $user->id // Exclure l'utilisateur qui a créé la mise à jour
-            );
-            \Log::info('📬 Progress creation notification sent from API (mobile app).');
-        } catch (\Exception $e) {
-            \Log::warning("Failed to send progress creation notification from API: " . $e->getMessage());
-        }
-
         // Formater la réponse avec conversion explicite des types
         $formattedUpdate = [
             'id' => (int)$update->id,

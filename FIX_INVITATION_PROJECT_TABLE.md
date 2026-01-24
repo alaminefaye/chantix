@@ -79,3 +79,6 @@ Cette migration crée la table pivot nécessaire pour la relation many-to-many e
 
 
 
+
+
+

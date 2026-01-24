@@ -126,3 +126,6 @@ if (count($finalProjectIds) === count($invitationProjectIds) &&
 
 echo "\n=== Fin de la correction ===\n";
 
+
+
+

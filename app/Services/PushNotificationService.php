@@ -478,30 +478,17 @@ class PushNotificationService
             $userIds = collect();
 
             // 1. Récupérer les managers du projet (depuis le champ managers qui est un array JSON)
-            // MAIS seulement s'ils sont assignés au projet via project_user
             if ($project->managers && is_array($project->managers)) {
                 $managerIds = array_filter($project->managers, function($id) {
                     return is_numeric($id);
                 });
                 if (!empty($managerIds)) {
-                    // Vérifier que ces managers sont bien assignés au projet
-                    $assignedManagerIds = \Illuminate\Support\Facades\DB::table('project_user')
-                        ->where('project_id', $project->id)
-                        ->whereIn('user_id', $managerIds)
-                        ->pluck('user_id')
-                        ->toArray();
-                    
-                    if (!empty($assignedManagerIds)) {
-                        $userIds = $userIds->merge($assignedManagerIds);
-                        Log::info("📋 Found managers assigned to project: " . implode(', ', $assignedManagerIds));
-                    } else {
-                        Log::info("⚠️ Managers found in project but not assigned via project_user: " . implode(', ', $managerIds));
-                    }
+                    $userIds = $userIds->merge($managerIds);
+                    Log::info("📋 Found managers: " . implode(', ', $managerIds));
                 }
             }
 
             // 2. Récupérer les superviseurs (utilisateurs avec le rôle "superviseur" dans l'entreprise)
-            // MAIS seulement s'ils sont assignés au projet
             $supervisorRole = Role::where('name', 'superviseur')->first();
             if ($supervisorRole) {
                 $supervisorIds = User::whereHas('companies', function($query) use ($companyId, $supervisorRole) {
@@ -509,21 +496,17 @@ class PushNotificationService
                           ->where('company_user.is_active', true)
                           ->where('company_user.role_id', $supervisorRole->id);
                 })
-                ->whereHas('projects', function($query) use ($project) {
-                    $query->where('projects.id', $project->id);
-                })
                 ->pluck('id');
 
                 if ($supervisorIds->isNotEmpty()) {
                     $userIds = $userIds->merge($supervisorIds);
-                    Log::info("👔 Found supervisors assigned to project: " . $supervisorIds->implode(', '));
+                    Log::info("👔 Found supervisors: " . $supervisorIds->implode(', '));
                 }
             } else {
                 Log::info("⚠️ Role 'superviseur' not found in database");
             }
 
             // 3. Récupérer les clients (utilisateurs avec le rôle "client" dans l'entreprise)
-            // MAIS seulement s'ils sont assignés au projet
             $clientRole = Role::where('name', 'client')->first();
             if ($clientRole) {
                 $clientIds = User::whereHas('companies', function($query) use ($companyId, $clientRole) {
@@ -531,31 +514,44 @@ class PushNotificationService
                           ->where('company_user.is_active', true)
                           ->where('company_user.role_id', $clientRole->id);
                 })
-                ->whereHas('projects', function($query) use ($project) {
-                    $query->where('projects.id', $project->id);
-                })
                 ->pluck('id');
 
                 if ($clientIds->isNotEmpty()) {
                     $userIds = $userIds->merge($clientIds);
-                    Log::info("👤 Found clients assigned to project: " . $clientIds->implode(', '));
+                    Log::info("👤 Found clients: " . $clientIds->implode(', '));
                 }
             } else {
                 Log::info("⚠️ Role 'client' not found in database");
             }
 
-            // 4. Récupérer UNIQUEMENT les utilisateurs assignés au projet via project_user
-            // C'est la méthode principale - seuls les utilisateurs invités/assignés au projet reçoivent des notifications
-            $assignedUserIds = \Illuminate\Support\Facades\DB::table('project_user')
-                ->where('project_id', $project->id)
-                ->pluck('user_id')
-                ->toArray();
-            
-            if (!empty($assignedUserIds)) {
-                $userIds = $userIds->merge($assignedUserIds);
-                Log::info("👥 Found users assigned to project via project_user: " . implode(', ', $assignedUserIds));
+            // 4. Récupérer les autres utilisateurs de l'entreprise du projet
+            // Méthode alternative via la relation directe de Company
+            $company = Company::find($companyId);
+            if ($company) {
+                $companyUserIds = $company->users()
+                    ->wherePivot('is_active', true)
+                    ->pluck('users.id');
+                
+                if ($companyUserIds->isNotEmpty()) {
+                    $userIds = $userIds->merge($companyUserIds);
+                    Log::info("🏢 Found company users via Company model: " . $companyUserIds->implode(', '));
+                } else {
+                    // Essayer avec whereHas si la méthode précédente ne fonctionne pas
+                    $companyUserIds = User::whereHas('companies', function($query) use ($companyId) {
+                        $query->where('companies.id', $companyId)
+                              ->where('company_user.is_active', true);
+                    })
+                    ->pluck('id');
+                    
+                    if ($companyUserIds->isNotEmpty()) {
+                        $userIds = $userIds->merge($companyUserIds);
+                        Log::info("🏢 Found company users via whereHas: " . $companyUserIds->implode(', '));
+                    } else {
+                        Log::warning("⚠️ No users found for company {$companyId}");
+                    }
+                }
             } else {
-                Log::info("⚠️ No users assigned to project {$project->id} via project_user table");
+                Log::error("❌ Company {$companyId} not found");
             }
 
             // Supprimer les doublons et exclure l'utilisateur qui a créé/modifié la dépense

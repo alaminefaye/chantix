@@ -106,3 +106,6 @@ if ($invitation && !empty($projectIds)) {
 
 echo "\n=== Fin de la vérification ===\n";
 
+
+
+

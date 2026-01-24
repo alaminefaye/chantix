@@ -77,3 +77,6 @@ Le code a été corrigé pour :
 - ✅ Utiliser des requêtes directes pour éviter les problèmes de cache
 - ✅ Vérifier la cohérence après chaque modification
 
+
+
+
